@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ACL RECOVERY PROTOCOL</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --accent:#4fc3a1;--accent-light:#6ee0bd;--accent-dim:#2a7a63;
+  --bg:#060a09;--s1:#0d1210;--s2:#131a18;--s3:#1a2320;--s4:#222e2b;
+  --text:#e8f0ee;--muted:#6a8a84;--muted2:#3d5552;
+  --red:#e05252;--green:#4fc3a1;--yellow:#c9a84c;--blue:#5e8fd4;--orange:#e07b35;
+  --purple:#9b72cf;--pink:#cf72a1;
+  --border:#1c2925;
+  --font-head:'Bebas Neue',sans-serif;
+  --font-body:'DM Sans',sans-serif;
+  --r:10px;--r-sm:6px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:14px;min-height:100vh;overflow-x:hidden}
+h1,h2,h3,.display{font-family:var(--font-head);letter-spacing:1px}
+button{font-family:var(--font-body);cursor:pointer;border:none;outline:none}
+input,textarea{font-family:var(--font-body);outline:none}
+[contenteditable="true"]:hover { outline: 1px dashed var(--accent-dim); border-radius: 2px; }
+[contenteditable="true"]:focus { outline: 1px solid var(--accent); background: rgba(79,195,161,0.05); border-radius: 2px; }
+
+/* ─── LAYOUT ─── */
+.app{display:flex;flex-direction:column;min-height:100vh}
+.top-bar{position:sticky;top:0;z-index:100;background:rgba(6,10,9,0.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 16px}
+.top-bar-inner{max-width:900px;margin:0 auto;display:flex;align-items:center;gap:12px;height:56px}
+.logo{font-family:var(--font-head);font-size:1.4rem;color:var(--accent-light);letter-spacing:2px;white-space:nowrap}
+.logo span{color:var(--muted);font-size:0.8rem;letter-spacing:1px;display:block;line-height:1;margin-top:-2px}
+.top-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.week-selector{display:flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);padding:5px 10px}
+.week-selector label{font-size:11px;color:var(--muted);white-space:nowrap}
+.week-selector select{background:transparent;color:var(--text);border:none;font-size:13px;font-family:var(--font-body);cursor:pointer;outline:none}
+.week-selector select option{background:#131a18}
+
+.main{flex:1;max-width:900px;margin:0 auto;width:100%;padding:0 16px 80px}
+
+/* ─── HERO ─── */
+.hero{padding:24px 0 20px;border-bottom:1px solid var(--border);margin-bottom:20px}
+.hero-title{font-family:var(--font-head);font-size:clamp(2rem,6vw,3rem);color:var(--accent-light);line-height:1;letter-spacing:2px}
+.hero-sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+.hero-stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.hstat{background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);padding:5px 10px;font-size:12px}
+.hstat-label{color:var(--muted);font-size:10px}
+.hstat-val{color:var(--accent);font-weight:500}
+
+/* ─── TAB NAV ─── */
+.day-nav{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;margin-bottom:16px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.day-nav::-webkit-scrollbar{display:none}
+.day-btn{flex-shrink:0;background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 14px;font-family:var(--font-head);font-size:15px;letter-spacing:1px;color:var(--muted);transition:all .15s}
+.day-btn:hover{color:var(--accent);border-color:var(--accent-dim)}
+.day-btn.active{background:#071512;border-color:var(--accent);color:var(--accent-light)}
+
+/* ─── DAY CARD ─── */
+.day-view{display:none}
+.day-view.active{display:block}
+.day-header{background:linear-gradient(135deg,#07130f,#060a09);border:1px solid #1a2e27;border-radius:var(--r);padding:16px 18px;margin-bottom:14px}
+.dh-row{display:flex;align-items:flex-start;gap:14px}
+.day-badge{font-family:var(--font-head);font-size:1.8rem;color:var(--accent-light);background:#071512;border:1px solid var(--accent-dim);border-radius:var(--r-sm);padding:4px 14px;flex-shrink:0;line-height:1.2}
+.day-title{font-family:var(--font-head);font-size:clamp(1.2rem,4vw,1.6rem);color:var(--text);letter-spacing:1px}
+.day-focus{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5}
+.tag-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.tag{border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500}
+.t-strength{background:#0a1f18;color:#4fc3a1;border:1px solid rgba(79,195,161,.3)}
+.t-hiit{background:#2a1a0a;color:#e07b35;border:1px solid rgba(224,123,53,.3)}
+.t-mob{background:#1a1030;color:#9b72cf;border:1px solid rgba(155,114,207,.3)}
+.t-rehab{background:#0a1a2a;color:#5e8fd4;border:1px solid rgba(94,143,212,.3)}
+.t-rest{background:#1a1a1a;color:#888;border:1px solid #333}
+.t-upper{background:#1f0a18;color:#cf72a1;border:1px solid rgba(207,114,161,.3)}
+.t-lower{background:#0f1a0a;color:#8ecf72;border:1px solid rgba(142,207,114,.3)}
+.t-cardio{background:#1a0a2a;color:#9b72cf;border:1px solid rgba(155,114,207,.3)}
+
+/* ─── ALERTS ─── */
+.alert{background:#120a0a;border:1px solid rgba(224,82,82,.25);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:8px;font-size:12px;color:#d47070;line-height:1.6}
+.alert strong{color:#e08888}
+.alert-wrap{margin-bottom:14px}
+.info-box{background:#071512;border:1px solid rgba(79,195,161,.2);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:14px;font-size:12px;color:#72c9ae;line-height:1.7}
+.info-box strong{color:var(--accent)}
+.info-box-purple{background:#0d0716;border:1px solid rgba(155,114,207,.2);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:14px;font-size:12px;color:#b89edf;line-height:1.7}
+.info-box-purple strong{color:var(--purple)}
+
+/* ─── SECTIONS ─── */
+.section{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;overflow:hidden}
+.sec-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.sec-head:hover{background:var(--s2)}
+.sec-icon{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.si-warm{background:#1a1a2a;color:#aaa}
+.si-main{background:#071512;color:#4fc3a1}
+.si-acc{background:#0a1a2a;color:#5e8fd4}
+.si-hiit{background:#2a1a0a;color:#e07b35}
+.si-mob{background:#1a1030;color:#9b72cf}
+.si-rehab{background:#071220;color:#5e8fd4}
+.si-cardio{background:#1a0a2a;color:#9b72cf}
+.si-posture{background:#1a1230;color:#b89edf}
+.si-notes{background:#0a1205;color:#4fc3a1}
+.sec-title{font-family:var(--font-head);font-size:.9rem;letter-spacing:2px;color:var(--accent);flex:1}
+.sec-toggle{color:var(--muted);font-size:12px;transition:transform .2s;margin-left:auto}
+.sec-toggle.open{transform:rotate(180deg)}
+.sec-body{padding:14px 16px}
+.sec-body.collapsed{display:none}
+
+/* ─── EXERCISE BLOCK ─── */
+.ex-block{background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:8px}
+.ex-head{padding:11px 14px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.ex-head:hover{background:var(--s3)}
+.ex-num{font-family:var(--font-head);font-size:13px;color:var(--muted);min-width:22px}
+.ex-name{font-weight:500;font-size:14px;flex:1}
+.ex-meta{font-size:11px;color:var(--accent);font-weight:500;text-align:right;flex-shrink:0;max-width:130px}
+.ex-arr{color:var(--muted);font-size:11px;transition:transform .2s;margin-left:6px;flex-shrink:0}
+.ex-body{display:none;padding:12px 14px;border-top:1px solid var(--border);background:#050d0b}
+.ex-body.open{display:block}
+.ex-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+@media(min-width:500px){.ex-grid{grid-template-columns:repeat(4,1fr)}}
+.ex-stat{background:var(--s2);border-radius:var(--r-sm);padding:7px 10px}
+.ex-stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.ex-stat-val{font-size:13px;font-weight:500;margin-top:2px}
+.ex-note{font-size:12px;color:var(--muted);line-height:1.7;padding:10px 12px;background:#040a08;border-radius:var(--r-sm);border-left:2px solid var(--accent);margin-bottom:12px}
+.ex-note strong{color:var(--accent-light)}
+
+/* Edit / Add Buttons */
+.edit-btn{background:transparent;border:none;color:#e05252;font-size:14px;cursor:pointer;opacity:0.6;padding:0 4px;}
+.edit-btn:hover{opacity:1;}
+.add-btn{background:rgba(79,195,161,0.1);border:1px dashed var(--accent-dim);border-radius:var(--r-sm);color:var(--accent);width:100%;padding:8px;font-size:12px;cursor:pointer;margin-top:8px;}
+.add-btn:hover{background:rgba(79,195,161,0.2);}
+
+/* ─── HIIT CIRCUIT ─── */
+.hiit-wrap{background:linear-gradient(135deg,#120d04,#0a0a06);border:1px solid rgba(224,123,53,.2);border-radius:var(--r);padding:14px 16px;margin-top:4px}
+.hiit-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.hiit-badge{background:rgba(224,123,53,.15);border:1px solid rgba(224,123,53,.35);border-radius:var(--r-sm);font-family:var(--font-head);font-size:.85rem;color:#e07b35;padding:3px 10px;letter-spacing:1px}
+.hiit-title{font-family:var(--font-head);font-size:1rem;color:var(--text);letter-spacing:1px}
+.hiit-note{font-size:11px;color:#a07850;margin-bottom:12px;line-height:1.6}
+.hiit-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+@media(min-width:500px){.hiit-grid{grid-template-columns:repeat(3,1fr)}}
+.hiit-ex{background:#160e04;border:1px solid #2a1e0a;border-radius:var(--r-sm);padding:9px 11px;position:relative;}
+.hiit-ex-name{font-weight:500;font-size:13px;color:var(--text);margin-bottom:3px}
+.hiit-ex-detail{font-size:11px;color:#a07850}
+.hiit-structure{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.hiit-pill{background:#1e1005;border:1px solid #2a1800;border-radius:20px;padding:3px 10px;font-size:11px;color:#e09050}
+
+/* ─── CARDIO BOX ─── */
+.cardio-wrap{background:linear-gradient(135deg,#0d0718,#060a09);border:1px solid rgba(155,114,207,.2);border-radius:var(--r);padding:14px 16px;margin-top:4px}
+.cardio-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.cardio-badge{background:rgba(155,114,207,.15);border:1px solid rgba(155,114,207,.35);border-radius:var(--r-sm);font-family:var(--font-head);font-size:.85rem;color:#b89edf;padding:3px 10px;letter-spacing:1px}
+.cardio-title{font-family:var(--font-head);font-size:.95rem;color:var(--text);letter-spacing:1px}
+.cardio-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+@media(min-width:500px){.cardio-grid{grid-template-columns:repeat(4,1fr)}}
+.cardio-pill-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.cardio-pill{background:#130a20;border:1px solid #2a1a40;border-radius:20px;padding:3px 10px;font-size:11px;color:#b89edf}
+.cardio-stat{background:#0d0718;border:1px solid rgba(155,114,207,.15);border-radius:var(--r-sm);padding:7px 10px}
+.cardio-stat-label{font-size:10px;color:#6a5080;text-transform:uppercase;letter-spacing:.5px}
+.cardio-stat-val{font-size:13px;font-weight:500;margin-top:2px;color:#b89edf}
+.cardio-note{font-size:12px;color:#8a7098;line-height:1.7;padding:10px 12px;background:#08050f;border-radius:var(--r-sm);border-left:2px solid #9b72cf;margin-top:8px}
+
+/* ─── DRILL LIST ─── */
+.drill-list{list-style:none}
+.drill-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #111a18;align-items:flex-start}
+.drill-item:last-child{border-bottom:none}
+.drill-arrow{color:var(--accent);flex-shrink:0;margin-top:1px;font-size:12px}
+.drill-name{font-weight:500;color:var(--text);font-size:13px}
+.drill-detail{color:var(--accent);font-size:11px;margin-left:6px}
+.drill-note{font-size:12px;color:var(--muted);line-height:1.6;margin-top:3px}
+
+/* ─── NUTRITION / NOTES SECTION ─── */
+.nutrition-section{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.ns-title{font-family:var(--font-head);font-size:1.1rem;color:var(--accent);margin-bottom:12px;letter-spacing:1px}
+.macro-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+@media(min-width:500px){.macro-grid{grid-template-columns:repeat(4,1fr)}}
+.macro-card{background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px;text-align:center}
+.macro-val{font-family:var(--font-head);font-size:1.5rem;color:var(--text)}
+.macro-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.meal-list{list-style:none}
+.meal-item{padding:10px 0;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:flex-start}
+.meal-item:last-child{border-bottom:none}
+.meal-time{font-size:11px;color:var(--accent);font-weight:500;min-width:55px;padding-top:1px}
+.meal-desc{font-size:12px;color:var(--text);line-height:1.6;flex:1}
+.meal-macros{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* ─── SUPPLEMENT TABLE ─── */
+.supp-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.supp-table th{text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:6px 8px;border-bottom:1px solid var(--border)}
+.supp-table td{padding:7px 8px;border-bottom:1px solid #111a18;vertical-align:top}
+.supp-table tr:last-child td{border-bottom:none}
+.supp-table tr:hover td{background:rgba(79,195,161,.03)}
+
+/* ─── POSTURE SECTION ─── */
+.posture-wrap{background:linear-gradient(135deg,#0a0718,#060a09);border:1px solid rgba(155,114,207,.2);border-radius:var(--r);padding:14px 16px;margin-bottom:12px}
+.posture-title{font-family:var(--font-head);font-size:1rem;color:#b89edf;letter-spacing:2px;margin-bottom:10px}
+.posture-sub{font-size:11px;color:#6a5080;margin-bottom:10px;line-height:1.6}
+.posture-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+@media(min-width:600px){.posture-grid{grid-template-columns:repeat(3,1fr)}}
+.posture-card{background:#0d0718;border:1px solid rgba(155,114,207,.15);border-radius:var(--r-sm);padding:10px 12px}
+.posture-card-title{font-family:var(--font-head);font-size:.75rem;color:#9b72cf;letter-spacing:1px;margin-bottom:6px}
+.posture-card ul{list-style:none;padding:0}
+.posture-card li{font-size:12px;color:#c0b0d8;line-height:1.8;padding:2px 0;border-bottom:1px solid rgba(155,114,207,.08)}
+.posture-card li:last-child{border-bottom:none}
+.posture-card li span{color:#9b72cf;font-size:11px;margin-left:4px}
+
+/* ─── SAUNA CARD ─── */
+.sauna-wrap{background:linear-gradient(135deg,#1a0a04,#060a09);border:1px solid rgba(224,123,53,.2);border-radius:var(--r);padding:14px 16px;margin-bottom:12px}
+.sauna-title{font-family:var(--font-head);font-size:1rem;color:#e09050;letter-spacing:2px;margin-bottom:10px}
+.sauna-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+@media(min-width:500px){.sauna-grid{grid-template-columns:repeat(4,1fr)}}
+.sauna-stat{background:#160a04;border:1px solid rgba(224,123,53,.15);border-radius:var(--r-sm);padding:8px 10px}
+.sauna-stat-label{font-size:10px;color:#806040;text-transform:uppercase;letter-spacing:.5px}
+.sauna-stat-val{font-size:12px;font-weight:500;margin-top:2px;color:#e09050}
+.sauna-benefits{font-size:11px;color:#a07850;line-height:1.7;padding:8px 10px;background:#100804;border-radius:var(--r-sm);border-left:2px solid rgba(224,123,53,.5)}
+
+/* ─── BOTTOM NAV ─── */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(6,10,9,0.98);backdrop-filter:blur(12px);border-top:1px solid var(--border);z-index:100;padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
+.bnav-inner{display:flex;justify-content:space-around;max-width:600px;margin:0 auto}
+.bnav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--muted);padding:4px 12px;font-size:10px;letter-spacing:.5px;transition:color .15s;font-family:var(--font-body)}
+.bnav-btn.active{color:var(--accent)}
+.bnav-icon{font-size:18px}
+
+@media(max-width:640px){
+  .top-bar{padding:0 12px}
+  .main{padding:0 12px 90px}
+}
+@media(min-width:641px){
+  .main{padding-bottom:80px}
+}
+
+.view{display:none}
+.view.active{display:block}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.day-view.active{animation:fadeIn .2s ease}
+.view.active{animation:fadeIn .2s ease}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--s4);border-radius:2px}
+
+.week-progress{display:flex;gap:4px;margin-bottom:14px}
+.wp-dot{flex:1;height:4px;background:var(--s3);border-radius:2px;transition:background .3s}
+.wp-dot.done{background:var(--accent-dim)}
+.wp-dot.active{background:var(--accent)}
+
+.sub-label{font-family:var(--font-head);font-size:.78rem;color:var(--accent);letter-spacing:1.5px;margin:14px 0 8px;padding-left:2px}
+
+.hydration-bar-wrap{background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:12px}
+.hbar-title{font-size:12px;color:var(--text);font-weight:500;margin-bottom:8px}
+.hbar-track{background:var(--s3);border-radius:4px;height:8px;overflow:hidden;margin-bottom:6px}
+.hbar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--blue),var(--accent));transition:width .4s}
+.hbar-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}
+
+.checklist{list-style:none}
+.check-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #111a18;cursor:pointer}
+.check-item:last-child{border-bottom:none}
+.check-item input[type=checkbox]{appearance:none;width:16px;height:16px;border:1px solid var(--accent-dim);border-radius:4px;flex-shrink:0;cursor:pointer;position:relative;transition:all .15s}
+.check-item input[type=checkbox]:checked{background:var(--accent);border-color:var(--accent)}
+.check-item input[type=checkbox]:checked::after{content:'✓';position:absolute;top:-1px;left:2px;font-size:11px;color:#000;font-weight:700}
+.check-item label{font-size:13px;color:var(--text);cursor:pointer;flex:1;line-height:1.5}
+.check-item.checked label{color:var(--muted);text-decoration:line-through}
+.check-item .check-detail{font-size:11px;color:var(--accent);flex-shrink:0}
+
+.drill-name .tip{display:none;font-size:11px;color:var(--muted);font-weight:400}
+.drill-item:hover .drill-name .tip{display:inline}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="top-bar">
+  <div class="top-bar-inner">
+    <div class="logo">ACL PROTOCOL<span>5-WEEK RECOVERY + FAT LOSS</span></div>
+    <div class="top-right">
+      <div class="week-selector">
+        <label>Week</label>
+        <select id="weekSelect" onchange="changeWeek(this.value)">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div id="programView" class="view active">
+    <div class="hero">
+      <div class="hero-title" id="heroTitle">WEEK 1</div>
+      <div class="hero-sub" id="heroSub">Foundation & Tissue Protection · Mobility · Stabilization</div>
+      <div class="hero-stats">
+        <div class="hstat"><div class="hstat-label">Phase</div><div class="hstat-val" id="heroPhase">Foundation</div></div>
+        <div class="hstat"><div class="hstat-label">Calories</div><div class="hstat-val" contenteditable="true">1800–1900</div></div>
+        <div class="hstat"><div class="hstat-label">Protein</div><div class="hstat-val" contenteditable="true">180–200g</div></div>
+        <div class="hstat"><div class="hstat-label">Training</div><div class="hstat-val" contenteditable="true">5+1 Days</div></div>
+        <div class="hstat"><div class="hstat-label">HIIT</div><div class="hstat-val" contenteditable="true">15 min/session</div></div>
+      </div>
+    </div>
+    <div class="day-nav" id="dayNav"></div>
+    <div id="dayViews"></div>
+  </div>
+
+  <div id="nutritionView" class="view">
+    <div class="nutrition-section">
+      <div class="ns-title" contenteditable="true">📝 DAILY / WEEKLY UPDATES & LOG</div>
+      <div class="ex-note" contenteditable="true" style="min-height: 80px;">Log your day-by-day or week-by-week weight check-ins, macro adjustments, and notes here...</div>
+    </div>
+
+    <div class="nutrition-section">
+      <div class="ns-title" contenteditable="true">🥗 DAILY NUTRITION TARGETS</div>
+      <div class="macro-grid">
+        <div class="macro-card"><div class="macro-val" contenteditable="true">1800</div><div class="macro-label" contenteditable="true">Calories</div></div>
+        <div class="macro-card"><div class="macro-val" contenteditable="true">190g</div><div class="macro-label" contenteditable="true">Protein</div></div>
+        <div class="macro-card"><div class="macro-val" contenteditable="true">60g</div><div class="macro-label" contenteditable="true">Fat</div></div>
+        <div class="macro-card"><div class="macro-val" contenteditable="true">30g</div><div class="macro-label" contenteditable="true">Net Carbs</div></div>
+      </div>
+      <div class="info-box" contenteditable="true">⏱ <strong>16:8 Intermittent Fasting</strong> — Fast 8 PM to 12 PM. Eating window 12 PM–8 PM. L-Carnitine 3–5g at 8 AM during fast.</div>
+
+      <ul class="meal-list">
+        <li class="meal-item">
+          <div class="meal-time" contenteditable="true">12:00 PM</div>
+          <div>
+            <div class="meal-desc" contenteditable="true">4 whole eggs scrambled in ghee · 150g grilled chicken breast · 50g mixed vegetables · 1 tbsp olive oil</div>
+            <div class="meal-macros" contenteditable="true">P: 65g · F: 22g · C: 3g · ~500 kcal</div>
+          </div>
+        </li>
+        <li class="meal-item">
+          <div class="meal-time" contenteditable="true">3:00 PM</div>
+          <div>
+            <div class="meal-desc" contenteditable="true">200g grilled chicken breast · 100g dahi (plain full-fat) · 150g mixed greens with olive oil</div>
+            <div class="meal-macros" contenteditable="true">P: 55g · F: 18g · C: 8g · ~450 kcal</div>
+          </div>
+        </li>
+        <li class="meal-item">
+          <div class="meal-time" contenteditable="true">6:00 PM</div>
+          <div>
+            <div class="meal-desc" contenteditable="true">150g paneer or cottage cheese · 200g mixed vegetables sautéed in butter · ½ cup whole milk · 20g almonds</div>
+            <div class="meal-macros" contenteditable="true">P: 45g · F: 20g · C: 12g · ~420 kcal</div>
+          </div>
+        </li>
+        <li class="meal-item">
+          <div class="meal-time" contenteditable="true">7:30 PM</div>
+          <div>
+            <div class="meal-desc" contenteditable="true">200g grilled fish (salmon) or chicken · 100g green leafy vegetables · 1 tbsp ghee</div>
+            <div class="meal-macros" contenteditable="true">P: 45g · F: 15g · C: 2g · ~340 kcal</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="nutrition-section">
+      <div class="ns-title" contenteditable="true">💊 SUPPLEMENT STACK</div>
+      <table class="supp-table">
+        <thead><tr><th>Supplement</th><th>Dose</th><th>Timing</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td contenteditable="true">L-Carnitine</td><td contenteditable="true">3–5g</td><td contenteditable="true">8 AM (fasted)</td><td contenteditable="true">Fat oxidation during fast</td></tr>
+          <tr><td contenteditable="true">Omega-3</td><td contenteditable="true">2–3g EPA/DHA</td><td contenteditable="true">Meal 1</td><td contenteditable="true">Anti-inflammatory, joint health</td></tr>
+          <tr><td contenteditable="true">BCAA</td><td contenteditable="true">5–10g</td><td contenteditable="true">Intra/post-workout</td><td contenteditable="true">Muscle preservation</td></tr>
+          <tr><td contenteditable="true">Protein Powder</td><td contenteditable="true">25–30g</td><td contenteditable="true">Meal 2 if needed</td><td contenteditable="true">Hit protein target</td></tr>
+          <tr><td contenteditable="true">Magnesium</td><td contenteditable="true">400mg</td><td contenteditable="true">7 PM</td><td contenteditable="true">Recovery, sleep, muscle relaxation</td></tr>
+          <tr><td contenteditable="true">Vitamin D3</td><td contenteditable="true">60k IU</td><td contenteditable="true">Once a week</td><td contenteditable="true">Immune, bone health, mood</td></tr>
+          <tr><td contenteditable="true">Multivitamin</td><td contenteditable="true">1 serve</td><td contenteditable="true">Meal 1</td><td contenteditable="true">Micronutrient insurance</td></tr>
+          <tr><td contenteditable="true">Creatine</td><td contenteditable="true">5g</td><td contenteditable="true">Post-workout</td><td contenteditable="true">Strength & recovery (optional)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="nutrition-section">
+      <div class="ns-title" contenteditable="true">⚡ POST-WORKOUT (HARD TRAINING DAYS)</div>
+      <div class="info-box-purple" contenteditable="true">Take within <strong>30–45 min</strong> of finishing training. Prioritise protein synthesis and muscle preservation window.</div>
+      <table class="supp-table">
+        <thead><tr><th>Supplement</th><th>Dose</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td contenteditable="true">BCAA</td><td contenteditable="true">5g</td><td contenteditable="true">Muscle preservation · intra/post</td></tr>
+          <tr><td contenteditable="true">Creatine</td><td contenteditable="true">5g <span style="color:var(--muted)">(optional)</span></td><td contenteditable="true">Effective for strength & recovery</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="nutrition-section">
+      <div class="ns-title" contenteditable="true">💧 HYDRATION PROTOCOL</div>
+      <div class="hydration-bar-wrap">
+        <div class="hbar-title" id="hbar-title">Daily Water Target: <span style="color:var(--accent)">3.0 L</span></div>
+        <div class="hbar-track"><div class="hbar-fill" id="hbar-fill" style="width:0%"></div></div>
+        <div class="hbar-labels"><span>0L</span><span>1L</span><span>2L</span><span>3L</span><span>4L+</span></div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button onclick="addWater(0.25)" style="background:var(--s3);color:var(--accent);border:1px solid var(--accent-dim);border-radius:var(--r-sm);padding:5px 10px;font-size:12px">+250ml</button>
+          <button onclick="addWater(0.5)" style="background:var(--s3);color:var(--accent);border:1px solid var(--accent-dim);border-radius:var(--r-sm);padding:5px 10px;font-size:12px">+500ml</button>
+          <button onclick="addWater(1)" style="background:var(--s3);color:var(--accent);border:1px solid var(--accent-dim);border-radius:var(--r-sm);padding:5px 10px;font-size:12px">+1L</button>
+          <button onclick="resetWater()" style="background:var(--s1);color:var(--muted);border:1px solid var(--border);border-radius:var(--r-sm);padding:5px 10px;font-size:12px">Reset</button>
+        </div>
+      </div>
+      <ul class="drill-list">
+        <li class="drill-item"><span class="drill-arrow">→</span><div><div class="drill-name" contenteditable="true">Base Target <span class="drill-detail">3–4 litres/day</span></div><div class="drill-note" contenteditable="true">Minimum daily hydration regardless of training.</div></div></li>
+        <li class="drill-item"><span class="drill-arrow">→</span><div><div class="drill-name" contenteditable="true">Sauna Add-on <span class="drill-detail">+500ml per 15-min session</span></div><div class="drill-note" contenteditable="true">500ml before · 250ml during · 500ml after each sauna session.</div></div></li>
+        <li class="drill-item"><span class="drill-arrow">→</span><div><div class="drill-name" contenteditable="true">Electrolytes <span class="drill-detail">2–3x/week</span></div><div class="drill-note" contenteditable="true">Pinch of Himalayan salt or zero-calorie electrolyte drink. Especially post-sauna and after intense sessions.</div></div></li>
+      </ul>
+    </div>
+
+    <div class="nutrition-section">
+      <div class="ns-title" contenteditable="true">🔄 OPTIONAL CARB RE-FEED (WEEK 5 ONLY)</div>
+      <div class="alert" style="margin-bottom:12px" contenteditable="true"><strong>⚠ Week 5 Only:</strong> 1 meal per week on a weekend. This is a strategic refeed, not a cheat meal.</div>
+      <table class="supp-table">
+        <thead><tr><th>Parameter</th><th>Target</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td contenteditable="true">Timing</td><td contenteditable="true">Weekend · 1 meal only</td><td contenteditable="true">Maximise glycogen window</td></tr>
+          <tr><td contenteditable="true">Carbs</td><td contenteditable="true">50–75g</td><td contenteditable="true">Glycogen replenishment</td></tr>
+          <tr><td contenteditable="true">Sources</td><td contenteditable="true">Rice, sweet potato, oats</td><td contenteditable="true">Clean sources only</td></tr>
+          <tr><td contenteditable="true">Benefits</td><td contenteditable="true">Hormonal recovery</td><td contenteditable="true">Leptin/T3 restoration</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="aclView" class="view">
+    <div class="nutrition-section">
+      <div class="ns-title" contenteditable="true">🦵 ACL-SPECIFIC PROTOCOL</div>
+      <div class="alert-wrap">
+        <div class="alert" contenteditable="true"><strong>⚠ Red Flags — STOP Training:</strong> Sharp knee pain · Swelling/effusion · Giving way sensation · Pain above 3/10 during any exercise</div>
+      </div>
+      <div class="info-box" contenteditable="true"><strong>Test all movements at 50% intensity before starting full sets.</strong> If pain-free at 50%, proceed. If not, regress or skip.</div>
+
+      <div class="sub-label" contenteditable="true">PROGRESSION RULES — WEEK BY WEEK</div>
+      <ul class="drill-list">
+        <li class="drill-item"><span class="drill-arrow">→</span><div><div class="drill-name" contenteditable="true">Week 1 <span class="drill-detail">Foundation — Isometrics & Machines</span></div><div class="drill-note" contenteditable="true">Isometric quad holds (4×20 sec), lying hamstring curls, leg press (90° max), calf raises, glute bridges. Zero dynamic unilateral loading. Pain-free range only. All HIIT is seated/upper-body. Fasted cardio = light stationary bike or slow walk at Zone 1 (able to hold full conversation).</div></div></li>
+        <li class="drill-item"><span class="drill-arrow">→</span><div><div class="drill-name" contenteditable="true">Week 2 <span class="drill-detail">Foundation Build — Progressing Loads</span></div><div class="drill-note" contenteditable="true">Slight weight increase on Leg Press and Hamstring Curls vs Week 1. Introduce adductor machine. Maintain machine-only lower body. Begin tracking pain response after each session — aim for 0/10 next morning. Fasted cardio: same Zone 1, extend to 35 mins if comfortable.</div></div></li>
+        <li class="drill-item"><span class="drill-arrow">→</span><div><div class="drill-name" contenteditable="true">Week 3 <span class="drill-detail">Strength Build — Introduce Split Squat</span></div><div class="drill-note" contenteditable="true">Introduce front-foot elevated split squat (RPE 6–7/10). Single-plane movements only. Increase RDL to moderate load. HIIT upgrades to moderate circuit (step-ups allowed if pain-free). Fasted cardio: 30 min Zone 1 stationary bike or brisk walk. Posture sequence to be done 6x/week.</div></div></li>
+        <li class="drill-item"><span class="drill-arrow">→</span><div><div class="drill-name" contenteditable="true">Week 4 <span class="drill-detail">Strength Build — Progressive Overload</span></div><div class="drill-note" contenteditable="true">Heavier split squats, RDL, and leg press (RPE 8/10). Rotational core work intensifies — increase cable resistance. Moderate HIIT continues. Fasted cardio: 30 min Zone 1 target HR 100–120 bpm. Optional jogging ONLY if cleared by PT and pain-free on all walking tests.</div></div></li>
+        <li class="drill-item"><span class="drill-arrow">→</span><div><div class="drill-name" contenteditable="true">Week 5 <span class="drill-detail">Peak Intensity — Max Effort</span></div><div class="drill-note" contenteditable="true">Heaviest week across all lifts (RPE 8–9/10). Explosive woodchops and rotational power introduced. High-intensity HIIT (4 rounds). Fasted cardio: 30 min Zone 1 (can include light jog intervals if PT-cleared — 30 sec jog / 90 sec walk). No pivoting, single-leg jumping, or uncontrolled deceleration without PT clearance.</div></div></li>
+        <li class="drill-item"><span class="drill-arrow" style="color:#e05252">⛔</span><div><div class="drill-name" style="color:#e08888" contenteditable="true">Never Until Cleared <span class="drill-detail" style="color:#e05252">PT Clearance Required</span></div><div class="drill-note" contenteditable="true">Single-leg jumping · Pivot/cutting movements · Uncontrolled deceleration · High-impact landing · Running above Zone 2 HR without PT sign-off.</div></div></li>
+      </ul>
+
+      <div class="sub-label" style="margin-top:16px" contenteditable="true">KEY STABILIZERS — EVERY SESSION</div>
+      <ul class="drill-list">
+        <li class="drill-item"><span class="drill-arrow">→</span><div><div class="drill-name" contenteditable="true">VMO Activation <span class="drill-detail">3×12 daily</span></div><div class="drill-note" contenteditable="true">Leg extensions with toes slightly inward. Crucial for ACL health and patellar tracking.</div></div></li>
+        <li class="drill-item"><span class="drill-arrow">→</span><div><div class="drill-name" contenteditable="true">Hamstring Curls <span class="drill-detail">3×10 every session</span></div><div class="drill-note" contenteditable="true">ACL synergist — hamstring strength directly protects the graft from anterior shear.</div></div></li>
+        <li class="drill-item"><span class="drill-arrow">→</span><div><div class="drill-name" contenteditable="true">Hip Abductor Raises <span class="drill-detail">3×15 daily</span></div><div class="drill-note" contenteditable="true">Sidelying leg lifts. Controls valgus collapse (knee caving inward) during all loaded movements.</div></div></li>
+        <li class="drill-item"><span class="drill-arrow">→</span><div><div class="drill-name" contenteditable="true">Glute Bridges <span class="drill-detail">3×15 daily</span></div><div class="drill-note" contenteditable="true">Hip extension strength and posterior chain activation. Reduces anterior knee forces.</div></div></li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="postureView" class="view">
+    <div class="nutrition-section">
+      <div class="ns-title" contenteditable="true">🧍 POSTURE & ROTATION CORRECTION</div>
+      <div class="info-box-purple" contenteditable="true">🗓 <strong>Daily Mobility Sequence:</strong> 10 mins · 6x/week. Perform in the morning or before your workout. Non-negotiable for thoracic and spinal health.</div>
+
+      <div class="posture-wrap">
+        <div class="posture-title" contenteditable="true">THORACIC MOBILITY — 3 MINS</div>
+        <div class="posture-grid">
+          <div class="posture-card">
+            <div class="posture-card-title" contenteditable="true">CAT-COW</div>
+            <ul contenteditable="true"><li>15 reps <span>slow breath</span></li><li>Full spinal wave</li><li>Exhale on flex</li></ul>
+          </div>
+          <div class="posture-card">
+            <div class="posture-card-title" contenteditable="true">THREAD THE NEEDLE</div>
+            <ul contenteditable="true"><li>10 per side <span>half-kneeling</span></li><li>Reach arm through</li><li>Hold 1 sec at end range</li></ul>
+          </div>
+          <div class="posture-card">
+            <div class="posture-card-title" contenteditable="true">THORACIC ROTATIONS</div>
+            <ul contenteditable="true"><li>15 per side <span>half-kneeling</span></li><li>Elbow to ceiling</li><li>Hips stay still</li></ul>
+          </div>
+          <div class="posture-card">
+            <div class="posture-card-title" contenteditable="true">SHOULDER CIRCLES</div>
+            <ul contenteditable="true"><li>10 forward / 10 back <span>per side</span></li><li>Quadruped position</li><li>Controlled arc</li></ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><div class="bottom-nav">
+  <div class="bnav-inner">
+    <button class="bnav-btn active" id="btn-program" onclick="showView('program',this)"><span class="bnav-icon">📋</span>Program</button>
+    <button class="bnav-btn" id="btn-nutrition" onclick="showView('nutrition',this)"><span class="bnav-icon">🥗</span>Nutrition</button>
+    <button class="bnav-btn" id="btn-posture" onclick="showView('posture',this)"><span class="bnav-icon">🧍</span>Posture</button>
+    <button class="bnav-btn" id="btn-acl" onclick="showView('acl',this)"><span class="bnav-icon">🦵</span>ACL Notes</button>
+  </div>
+</div>
+
+</div><script>
+// ─── WATER TRACKER ────────────────────────────────────────────────────────────
+let waterLitres = 0;
+function addWater(amt) {
+  waterLitres = Math.min(waterLitres + amt, 4);
+  updateHydrationBar();
+}
+function resetWater() {
+  waterLitres = 0;
+  updateHydrationBar();
+}
+function updateHydrationBar() {
+  const pct = (waterLitres / 4) * 100;
+  document.getElementById('hbar-fill').style.width = pct + '%';
+  const tit = document.getElementById('hbar-title');
+  const color = waterLitres >= 3 ? 'var(--accent)' : waterLitres >= 2 ? 'var(--yellow)' : '#e05252';
+  tit.innerHTML = `Daily Water Target: <span style="color:${color}">${waterLitres.toFixed(2).replace(/\.?0+$/,'')} L</span> / 4 L`;
+}
+
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const DAY_NAMES = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];
+const DAY_SHORT = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+
+const PHASES = {
+  1: { label:'Foundation', sub:'Foundation & Tissue Protection · Mobility · Pain-Free Movement' },
+  2: { label:'Foundation', sub:'Foundation & Tissue Protection · Building Baseline Strength' },
+  3: { label:'Strength Build', sub:'Increased Volume · Hypertrophy · Arm Development' },
+  4: { label:'Strength Build', sub:'Progressive Overload · Posture Correction · Conditioning' },
+  5: { label:'Peak Volume', sub:'Max Strength · Metabolic Stress · Peak Conditioning' },
+};
+
+const HIIT = {
+  low: {
+    title:'Low-Impact HIIT Circuit',
+    note:'Post-workout · 15 minutes · No jumping · ACL-safe · Rest 20s between exercises, 60s between rounds',
+    structure:['3 rounds','45s work','20s rest','0 impact'],
+    exercises:[
+      {name:'Seated Bike Sprint',detail:'45s max effort'},
+      {name:'Battle Rope Slams',detail:'45s explosive'},
+      {name:'Resistance Band Pulls',detail:'45s continuous'},
+      {name:'Upper Body Punches',detail:'45s fast pace'},
+      {name:'Seated Med Ball Slams',detail:'45s explosive'},
+      {name:'Slow Stationary March',detail:'45s active recovery'},
+    ]
+  },
+  mid: {
+    title:'Moderate HIIT Circuit',
+    note:'Post-workout · 15 minutes · Controlled leg movements only · ACL-safe · 3 rounds',
+    structure:['3 rounds','40s work','20s rest','Low impact'],
+    exercises:[
+      {name:'Stationary Bike Intervals',detail:'40s hard / 20s easy'},
+      {name:'Resistance Band Rows',detail:'40s fast pace'},
+      {name:'Wall Ball Throws',detail:'40s explosive'},
+      {name:'Step-Ups (Slow)',detail:'40s controlled'},
+      {name:'Battle Rope Waves',detail:'40s continuous'},
+      {name:'Core Anti-Rotation Hold',detail:'40s Pallof press'},
+    ]
+  },
+  high: {
+    title:'Peak HIIT Circuit',
+    note:'Post-workout · 15 minutes · Higher intensity · 4 rounds · Cleared by PT required for step-ups',
+    structure:['4 rounds','35s work','15s rest','Moderate impact'],
+    exercises:[
+      {name:'Bike Sprints',detail:'35s max effort'},
+      {name:'Kettlebell Swings',detail:'35s explosive'},
+      {name:'Med Ball Slams',detail:'35s overhead'},
+      {name:'Step-Ups (Weighted)',detail:'35s alternating'},
+      {name:'Battle Rope Alternating',detail:'35s max speed'},
+      {name:'Plank to Row',detail:'35s core + pull'},
+    ]
+  }
+};
+
+function cardioBlock(week) {
+  const notes = {
+    1: 'Stationary bike or very slow walk. HR 95–105 bpm. Full conversation pace.',
+    2: 'Stationary bike preferred. HR 100–110 bpm. Extend to 35 min if comfortable.',
+    3: 'Stationary bike or incline treadmill walk (5–7°). HR 100–115 bpm. 30 min.',
+    4: 'Stationary bike, incline walk, or elliptical. HR 105–115 bpm. 30 min.',
+    5: 'Bike, incline walk, or light jog intervals (if PT-cleared): 30s jog / 90s walk. HR 105–120 bpm.',
+  };
+  return {
+    icon:'si-cardio', label:'CARDIO', title:'MORNING FASTED CARDIO (30 MIN)',
+    cardio: notes[week] || notes[1]
+  };
+}
+
+function ex(num,name,meta,sets,reps,rest,note){
+  return {num,name,meta,sets,reps,rest,note};
+}
+
+// ─── WARMUP LIBRARY ──────────────────────────────────────────────────────────
+function warmupLower(week) {
+  const extra = week >= 3
+    ? [{name:'Hip Flexor Stretch (Half-Kneeling)',detail:'30 sec/side',note:'Lean into lunge. Posterior pelvic tilt. Releases hip flexors before loaded movements.'}]
+    : [];
+  return [
+    {name:'Glute Bridges',detail:'2×15',note:'Squeeze at top, 1-second hold. Activates glutes and primes posterior chain before any lower body loading.'},
+    {name:'Quadriceps Isometric Hold',detail:'3×20 sec',note:'Seated, knee fully extended. Maximum quad engagement, zero pain. VMO activation before machine work.'},
+    {name:'Hip Abductor Sidelying Raises',detail:'2×12/side',note:'Controlled small ROM. Activates hip abductors to prevent valgus collapse during all lower body exercises.'},
+    {name:'Calf Raises (Both Legs)',detail:'2×15',note:'Full ROM, slow and controlled. Warms ankle joint and calf complex.'},
+    {name:'Cat-Cow Stretches',detail:'2×10',note:'Thoracic mobility and breathing pattern. Activates the full spinal extensors.'},
+    ...extra
+  ];
+}
+
+function warmupUpper() {
+  return [
+    {name:'Band Pull-Aparts',detail:'2×15',note:'Hold band at chest width. Pull apart to full extension. Activates rear delts and external rotators — critical for shoulder health.'},
+    {name:'Scapular Squeezes (Prone)',detail:'2×15',note:'Lie face down. Retract shoulder blades fully, hold 2 seconds. Activates lower traps and rhomboids for posture correction.'},
+    {name:'Arm Circles',detail:'15 forward + 15 backward',note:'Full ROM shoulder circles. Increase in circle size over 15 reps. Warms glenohumeral joint.'},
+    {name:'Wrist Circles + Wrist Flexor Stretch',detail:'20 each / 30 sec',note:'Forearm prep. Prevents wrist strain during pressing movements.'},
+  ];
+}
+
+function warmupFullBody(week) {
+  const extra = week >= 3
+    ? [{name:'Light Band Rotations',detail:'2×12/side',note:'Stand in half-kneeling. Gentle rotation to prime thoracic spine for rotational work later in session.'}]
+    : [];
+  return [
+    {name:'Hip Circles',detail:'10 each direction',note:'Stand on one leg. Large circular hip movement. Lubricates hip joint and improves femoral head glide.'},
+    {name:'Band Pull-Aparts',detail:'2×12',note:'Rear delt and external rotator activation. Essential before any pressing.'},
+    {name:'Scapular Activation',detail:'2×12',note:'Prone or standing. Retract and depress blades. Posture primer.'},
+    {name:'Glute Bridges',detail:'2×12',note:'Posterior chain activation. Hip hinge pattern primer.'},
+    ...extra
+  ];
+}
+
+function warmupMobility(week) {
+  return [
+    {name:'Glute Bridges',detail:'2×15',note:'Core and glute primer for mobility session.'},
+    {name:'Leg Extensions (Light)',detail:'2×12',note:'50% weight. VMO warm-up before deeper hip and leg stretches.'},
+    {name:'Hip Circles',detail:'10 each direction',note:'Large ROM. Loosens hip capsule.'},
+    ...(week >= 3 ? [{name:'Thoracic Rotations (Quadruped)',detail:'10/side',note:'Prerequisite for pigeon and couch stretch — opens up thoracolumbar fascia.'}] : []),
+  ];
+}
+
+// ─── WEEK PROGRAMS ────────────────────────────────────────────────────────────
+function makeDays_W12(isW2) {
+  const wNum = isW2 ? 2 : 1;
+  return [
+    {
+      day: DAY_SHORT[0], dayFull: DAY_NAMES[0], title:'Lower Body Foundation',
+      focus:'Quad & Glute Activation · Machine Work · Stabilizers',
+      tags:['t-lower','t-rehab'],tagLabels:['Lower Body','Rehab'],
+      alert:'Weeks 1–2: Machines only. Pain-free range. No dynamic unilateral loading.',
+      sections:[
+        {icon:'si-cardio',label:'CARDIO',title:'MORNING FASTED CARDIO (30 MIN)',cardio:cardioBlock(wNum).cardio},
+        {icon:'si-warm',label:'WARM-UP',title:'ACTIVATION (10 MIN)',drills:warmupLower(wNum)},
+        {icon:'si-main',label:'MAIN',title:'STRENGTH BLOCK (25 MIN)',exercises:[
+          ex(1,'Leg Press (Machine)','4×8',4,8,'2 min',`90° knee max — do NOT lock out. 2-second eccentric. ${isW2?'Aim to add small weight vs Week 1.':'Start light, perfect form first.'}`),
+          ex(2,'Leg Extensions (Machine)','4×10',4,10,'90 sec','2-second hold at top. Toes slightly inward for VMO emphasis. Light–moderate weight only.'),
+          ex(3,'Hamstring Curls (Lying Machine)','3×10',3,10,'90 sec','Full ROM, 1-second hold at top. Hamstring strength is critical for ACL graft protection.'),
+          ex(4,'Calf Raises (Machine)','3×15',3,15,'60 sec','Full ROM. Controlled descent.'),
+        ]},
+        {icon:'si-acc',label:'CORE',title:'CORE & STABILIZERS (10 MIN)',exercises:[
+          ex(5,'Dead Bug','3×8/side',3,8,'60 sec','Opposite arm + leg extension. Lower back stays flat on floor. Exhale on extension.'),
+          ex(6,'Pallof Press (Cable/Band)','3×10/side',3,10,'60 sec','Anti-rotation focus. Standing position. Core braced, no rotation at all.'),
+        ]},
+        {icon:'si-hiit',label:'HIIT',title:'HIIT CIRCUIT (15 MIN)',hiit:'low'},
+      ]
+    },
+    {
+      day:DAY_SHORT[1],dayFull:DAY_NAMES[1],title:'Upper Body + Arms',
+      focus:'Chest · Back · Biceps · Triceps · Forearms',
+      tags:['t-upper'],tagLabels:['Upper Body'],
+      sections:[
+        {icon:'si-cardio',label:'CARDIO',title:'MORNING FASTED CARDIO (30 MIN)',cardio:cardioBlock(wNum).cardio},
+        {icon:'si-warm',label:'WARM-UP',title:'WARM-UP (8 MIN)',drills:warmupUpper()},
+        {icon:'si-main',label:'CHEST & BACK',title:'COMPOUND STRENGTH (35 MIN)',exercises:[
+          ex(1,'Barbell Bench Press','4×6–8',4,'6–8','2 min','Full ROM. Scapula retracted throughout. Elbows 45–60° from torso. Do not flare.'),
+          ex(2,'Barbell Rows (Underhand Grip)','4×8',4,8,'2 min','Explosive pull. Pause and squeeze at top. Back thickness and posture correction driver.'),
+          ex(3,'Dumbbell Incline Press','3×10',3,10,'90 sec','Upper chest emphasis. Shoulder stability. Control the descent — 2 sec down.'),
+          ex(4,'Machine Lat Pulldowns (Wide)','3×10',3,10,'90 sec','Chest to bar. Elbows slightly forward. Full stretch at top — feel the lat elongate.'),
+        ]},
+        {icon:'si-acc',label:'ARMS',title:'ARMS & FOREARMS (20 MIN)',exercises:[
+          ex(5,'EZ Bar Curls','3×10',3,10,'90 sec','Full ROM. 2-second eccentric. Strict form, no swinging. Elbow fixed.'),
+          ex(6,'Tricep Rope Pushdowns','3×12',3,12,'60 sec','Full extension. Constant cable tension. Squeeze at bottom — hold 1 sec.'),
+          ex(7,'Dumbbell Hammer Curls','3×10',3,10,'75 sec','Neutral grip. Brachialis + bicep. Forearm thickness builder.'),
+          ex(8,'Overhead Dumbbell Tricep Extension','3×10',3,10,'75 sec','Full ROM overhead. Elbow stable. Tricep long head emphasis.'),
+          ex(9,'Barbell Wrist Curls','3×12',3,12,'60 sec','Supinated grip. Full ROM. Forearm flexor strength.'),
+          ex(10,'Reverse Barbell Wrist Curls','3×12',3,12,'60 sec','Pronated grip. Forearm extensor + wrist stability.'),
+        ]},
+        {icon:'si-hiit',label:'HIIT',title:'HIIT CIRCUIT (15 MIN)',hiit:'low'},
+      ]
+    },
+    {
+      day:DAY_SHORT[2],dayFull:DAY_NAMES[2],title:'Full Body + Rotation',
+      focus:'Compound Upper · Rotational Core · Lower Machine Work',
+      tags:['t-strength','t-rehab'],tagLabels:['Full Body','Rotational Core'],
+      sections:[
+        {icon:'si-cardio',label:'CARDIO',title:'MORNING FASTED CARDIO (30 MIN)',cardio:cardioBlock(wNum).cardio},
+        {icon:'si-warm',label:'WARM-UP',title:'WARM-UP (8 MIN)',drills:warmupFullBody(wNum)},
+        {icon:'si-main',label:'UPPER',title:'UPPER BODY (25 MIN)',exercises:[
+          ex(1,'Dumbbell Floor Press','4×8',4,8,'2 min','Scapula retracted. Full ROM. Safer for shoulder stability than full bench. Pause at bottom 1 sec.'),
+          ex(2,'Seal Rows or Machine Rows','3×10',3,10,'90 sec','Full ROM. Scapular squeeze at top. Chest supported removes lower back fatigue.'),
+          ex(3,'Machine Chest Flye','3×12',3,12,'90 sec','Constant tension. Controlled arc. Full pec stretch at bottom.'),
+        ]},
+        {icon:'si-acc',label:'LOWER',title:'LOWER BODY MACHINES (15 MIN)',exercises:[
+          ex(4,'Leg Press (Machine)','3×8',3,8,'2 min','Same cues as Monday. Aim for similar or slightly higher load.'),
+          ex(5,'Hamstring Curls (Lying)','3×10',3,10,'90 sec','Full ROM, 1-second hold at peak contraction.'),
+          ex(6,'Adductor Machine','2×12',2,12,'60 sec','Controlled squeeze. No momentum. Groin and adductor stability.'),
+        ]},
+        {icon:'si-rehab',label:'ROTATION',title:'ROTATIONAL CORE (10 MIN)',exercises:[
+          ex(7,'Cable/Band Woodchops (High to Low)','3×10/side',3,10,'75 sec','Feet staggered. Hips stable. Rotate from thorax, not arms. Light resistance only.'),
+          ex(8,'Pallof Press','3×10/side',3,10,'60 sec','Anti-rotation. Constant tension. Core braced throughout — zero rotation.'),
+        ]},
+        {icon:'si-hiit',label:'HIIT',title:'HIIT CIRCUIT (15 MIN)',hiit:'low'},
+      ]
+    },
+    {
+      day:DAY_SHORT[3],dayFull:DAY_NAMES[3],title:'Upper Body + Forearms',
+      focus:'Pressing · Pulling · Arm Specialization · Grip',
+      tags:['t-upper'],tagLabels:['Upper Body'],
+      sections:[
+        {icon:'si-cardio',label:'CARDIO',title:'MORNING FASTED CARDIO (30 MIN)',cardio:cardioBlock(wNum).cardio},
+        {icon:'si-warm',label:'WARM-UP',title:'WARM-UP (8 MIN)',drills:warmupUpper()},
+        {icon:'si-main',label:'PRESSING',title:'STRENGTH (30 MIN)',exercises:[
+          ex(1,'Dumbbell Bench Press','4×8',4,8,'2 min','Full ROM. 1-second pause at bottom. Scapula retracted.'),
+          ex(2,'Barbell Rows (Overhand)','4×8',4,8,'2 min','Full back contraction. Protraction–retraction. Pause squeeze at top.'),
+          ex(3,'Dumbbell Incline Press','3×10',3,10,'90 sec','Upper chest. Controlled eccentric.'),
+          ex(4,'Machine Lat Pulldowns','3×10',3,10,'90 sec','Wide grip. Chest to bar.'),
+        ]},
+        {icon:'si-acc',label:'ARMS',title:'ARM & FOREARM SPEC (20 MIN)',exercises:[
+          ex(5,'Dumbbell Preacher Curls','3×10',3,10,'90 sec','Strict. No momentum. Peak contraction.'),
+          ex(6,'Skull Crushers (EZ Bar)','3×10',3,10,'90 sec','Full ROM overhead. Controlled eccentric. Tricep long head.'),
+          ex(7,'Cable Curls','3×12',3,12,'60 sec','Constant tension. Bicep peak squeeze at top.'),
+          ex(8,'Tricep Dips (Assisted)','3×8–10',3,'8–10','2 min','Full ROM. Controlled descent. Lean slightly forward for chest involvement.'),
+          ex(9,'Farmer\'s Carry','3×40 sec/side',3,'40 sec','60 sec','Heavy dumbbells. Upright posture. Grip endurance + core stabilization.'),
+          ex(10,'Reverse + Regular Wrist Curls (Superset)','3×12',3,12,'60 sec','Back to back. Complete forearm development.'),
+        ]},
+        {icon:'si-hiit',label:'HIIT',title:'HIIT CIRCUIT (15 MIN)',hiit:'low'},
+      ]
+    },
+    {
+      day:DAY_SHORT[4],dayFull:DAY_NAMES[4],title:'Lower Body + Rotational Core',
+      focus:'RDL · Machines · Rotational Movements · Posterior Chain',
+      tags:['t-lower','t-rehab'],tagLabels:['Lower Body','Rotational'],
+      sections:[
+        {icon:'si-cardio',label:'CARDIO',title:'MORNING FASTED CARDIO (30 MIN)',cardio:cardioBlock(wNum).cardio},
+        {icon:'si-warm',label:'WARM-UP',title:'WARM-UP (8 MIN)',drills:warmupLower(wNum)},
+        {icon:'si-main',label:'LOWER',title:'LOWER BODY STRENGTH (30 MIN)',exercises:[
+          ex(1,'Romanian Deadlift (Dumbbells)','4×8',4,8,'2 min','Light weight. Hip hinge pattern. Slight knee bend. Hamstring stretch at bottom. Neutral spine — do not round.'),
+          ex(2,'Leg Extensions (Machine)','3×12',3,12,'90 sec','2-second pause at top. VMO emphasis. Controlled throughout.'),
+          ex(3,'Hamstring Curls (Lying)','3×10',3,10,'90 sec','Full ROM. Strict form.'),
+          ex(4,'Cossack Squats (Bodyweight)','3×8/side',3,8,'75 sec','Hip mobility + adductor strength. Bodyweight only. Pain-free ROM.'),
+        ]},
+        {icon:'si-rehab',label:'ROTATION',title:'ROTATIONAL CORE (15 MIN)',exercises:[
+          ex(5,'Cable Woodchops (Low to High)','3×10/side',3,10,'75 sec','Stand perpendicular. Drive bar diagonally upward. Rotate from hips/core. Light resistance.'),
+          ex(6,'Half-Kneeling Cable Rotations','3×10/side',3,10,'75 sec','Tall half-kneeling position. Rotate thoracically. Core anti-rotation.'),
+          ex(7,'Pallof Press (Heavy)','3×10/side',3,10,'60 sec','Maximum anti-rotation tension. Core braced.'),
+        ]},
+        {icon:'si-hiit',label:'HIIT',title:'HIIT CIRCUIT (15 MIN)',hiit:'low'},
+      ]
+    },
+    {
+      day:DAY_SHORT[5],dayFull:DAY_NAMES[5],title:'Mobility + Recovery',
+      focus:'Full Body Mobility · Flexibility · Optional Sauna',
+      tags:['t-mob','t-rest'],tagLabels:['Mobility','Recovery'],
+      sections:[
+        {icon:'si-mob',label:'MOBILITY',title:'THORACIC & SPINAL (8 MIN)',drills:[
+          {name:'Cat-Cow Stretches',detail:'2×12',note:'Inhale on arch (cow), exhale on curl (cat). Full spinal wave.'},
+          {name:'Thread the Needle (Half-Kneeling)',detail:'2×10/side',note:'Reach arm under opposite arm. Hold 1 sec at deepest rotation.'},
+          {name:'Thoracic Rotations (Half-Kneeling)',detail:'2×12/side',note:'Open elbow to ceiling. Hips stay squared forward. Thorax only rotates.'},
+          {name:'Quadruped Shoulder Circles',detail:'2×10 forward + backward',note:'Support on opposite hand and knee. Full shoulder circle. Controlled arc.'},
+        ]},
+        {icon:'si-mob',label:'HIP',title:'HIP & LOWER BODY (10 MIN)',drills:[
+          {name:'Couch Stretch',detail:'90 sec/side',note:'Rear knee on floor, front foot forward. Squeeze rear glute to deepen. Hip flexor lengthening.'},
+          {name:'90/90 Hip Stretch',detail:'60 sec/side',note:'Both knees at 90°. Lean over front shin. Internal + external rotation simultaneously.'},
+          {name:'Pigeon Pose',detail:'60 sec/side',note:'Modified on floor. Breathe into the hip. Piriformis and deep hip rotator release.'},
+          {name:'Cossack Squats',detail:'2×8/side',note:'Bodyweight. Adductor mobility. Shift weight side to side.'},
+          {name:'Hamstring Stretch (Seated Forward Fold)',detail:'60 sec',note:'Both legs extended. Reach for toes. Breathe out and extend each exhale.'},
+        ]},
+        {icon:'si-mob',label:'UPPER',title:'SHOULDER & UPPER BODY (8 MIN)',drills:[
+          {name:'Shoulder Dislocates (Band)',detail:'2×15',note:'Wide grip. Bring band from front to behind and back. Increase range gradually.'},
+          {name:'Band Pull-Aparts',detail:'2×15',note:'Rear delt and external rotator stretch + activation.'},
+          {name:"Child's Pose (Arms Extended)",detail:'90 sec',note:'Arms stretched overhead. Breathe into thoracic spine. Latissimus stretch.'},
+          {name:'90/90 Shoulder Stretch',detail:'60 sec/side',note:'Both arms at 90° against wall or floor. Internal rotation stretch.'},
+        ]},
+        {icon:'si-warm',label:'FLEX',title:'LOWER BODY FLEXIBILITY (8 MIN)',drills:[
+          {name:'Calf Stretch',detail:'45 sec/leg',note:'Both straight and bent-knee. Covers gastrocnemius and soleus.'},
+          {name:'Spinal Twists (Lying)',detail:'30 sec/side',note:'Knee crosses over body. Opposite shoulder stays flat. Total spinal de-rotation.'},
+          {name:'Happy Baby Pose',detail:'60 sec',note:'Feet held with hands. Rock gently side to side. Lower back decompression.'},
+          {name:'Supine Hip Flexor Stretch',detail:'60 sec/side',note:'One leg pulls to chest, other extends. Iliopsoas release.'},
+        ]},
+        {icon:'si-warm',label:'WRIST',title:'WRIST & FOREARM (3 MIN)',drills:[
+          {name:'Wrist Circles',detail:'20 each direction',note:'Full range of motion. Both hands simultaneously.'},
+          {name:'Wrist Flexor Stretch',detail:'30 sec/side',note:'Palm up, fingers down. Gentle extension. Forearm flexor length.'},
+          {name:'Wrist Extensor Stretch',detail:'30 sec/side',note:'Fist down, press toward floor. Forearm extensor release.'},
+        ]},
+      ]
+    },
+    {
+      day:DAY_SHORT[6],dayFull:DAY_NAMES[6],title:'Complete Rest',
+      focus:'Full Recovery · Sleep · Light Walk Optional',
+      tags:['t-rest'],tagLabels:['Rest'],
+      sections:[{icon:'si-mob',label:'REST',title:'REST DAY GUIDELINES',drills:[
+        {name:'Sleep',detail:'7–9 hours',note:'Priority. Magnesium 400mg at 8:30 PM. Aim for 9 hours on week 1–2.'},
+        {name:'Light Walk',detail:'20–30 min optional',note:'Easy pace — not a workout. Promotes blood flow without cortisol spike.'},
+        {name:'Hydration',detail:'3+ litres',note:'Continue even on rest days — recovery still requires full hydration.'},
+        {name:'Nutrition',detail:'Same protocol',note:'Do not reduce calories on rest days — tissue repair and recovery require consistent fuel.'},
+      ]}]
+    },
+  ];
+}
+
+function makeDays_W34(isW4) {
+  const wNum = isW4 ? 4 : 3;
+  return [
+    {
+      day:DAY_SHORT[0],dayFull:DAY_NAMES[0],title:'Lower Body Strength',
+      focus:'Leg Press · RDL · Front-Foot Elevated Split Squat · Machines',
+      tags:['t-lower'],tagLabels:['Lower Body'],
+      sections:[
+        {icon:'si-cardio',label:'CARDIO',title:'MORNING FASTED CARDIO (30 MIN)',cardio:cardioBlock(wNum).cardio},
+        {icon:'si-warm',label:'WARM-UP',title:'WARM-UP (8 MIN)',drills:warmupLower(wNum)},
+        {icon:'si-main',label:'MAIN',title:'STRENGTH BLOCK (35 MIN)',exercises:[
+          ex(1,'Leg Press (Machine)','4×8',4,8,'2 min',`Progressive load. ${isW4?'RPE 8/10 — push the weight.':'RPE 7/10. Building up.'} 2-second eccentric. 90° knee max.`),
+          ex(2,'Romanian Deadlift (Dumbbells)','3×8',3,8,'2 min',`Hamstring emphasis. Hip hinge. ${isW4?'Heavier than Week 3.':'Moderate weight.'} Neutral spine always.`),
+          ex(3,'Front-Foot Elevated Split Squat','3×8/leg',3,8,'90 sec','Front foot on 2–4 inch plate. Reduces knee travel. 70% weight on front leg. Pain-free ROM only.'),
+          ex(4,'Leg Extensions (Machine)','3×12',3,12,'90 sec','2-second hold at peak. VMO. Unilateral if pain-free.'),
+          ex(5,'Hamstring Curls (Lying)','3×10',3,10,'90 sec','Full ROM. ACL protection.'),
+        ]},
+        {icon:'si-acc',label:'CORE',title:'CORE & ROTATIONAL (10 MIN)',exercises:[
+          ex(6,'Cable Woodchops (High to Low)','3×10/side',3,10,'75 sec','Rotational core. Light–moderate load.'),
+          ex(7,'Pallof Press','3×12/side',3,12,'60 sec','Anti-rotation. Heavy band or cable.'),
+          ex(8,'Calf Raises (Machine)','3×15',3,15,'60 sec','Full ROM.'),
+        ]},
+        {icon:'si-hiit',label:'HIIT',title:'HIIT CIRCUIT (15 MIN)',hiit:'mid'},
+      ]
+    },
+    {
+      day:DAY_SHORT[1],dayFull:DAY_NAMES[1],title:'Upper Body Hypertrophy + Arms',
+      focus:'Chest · Back · Biceps · Triceps · Forearms Specialization',
+      tags:['t-upper'],tagLabels:['Upper Body'],
+      sections:[
+        {icon:'si-cardio',label:'CARDIO',title:'MORNING FASTED CARDIO (30 MIN)',cardio:cardioBlock(wNum).cardio},
+        {icon:'si-warm',label:'WARM-UP',title:'WARM-UP (8 MIN)',drills:warmupUpper()},
+        {icon:'si-main',label:'CHEST & BACK',title:'COMPOUND STRENGTH (30 MIN)',exercises:[
+          ex(1,'Dumbbell Bench Press','4×8–10',4,'8–10','2 min',`Full ROM. ${isW4?'Heavier than Week 3.':'Building base load.'} Controlled eccentric.`),
+          ex(2,'Barbell Rows (Overhand)','4×8',4,8,'2 min','Full back contraction. Protraction–retraction. Pause squeeze at top.'),
+          ex(3,'Incline Dumbbell Press','3×10',3,10,'90 sec','Upper chest. Shoulder stability.'),
+          ex(4,'Machine Lat Pulldowns (Wide)','3×12',3,12,'90 sec','Full stretch. Chest to bar.'),
+        ]},
+        {icon:'si-acc',label:'ARMS',title:'ARMS SPECIALIZATION (30 MIN)',exercises:[
+          ex(5,'EZ Bar Curls','4×8–10',4,'8–10','2 min','Primary bicep builder. Full ROM. Strict form.'),
+          ex(6,'Tricep Rope Pushdowns','4×10–12',4,'10–12','90 sec','Constant tension. Full extension.'),
+          ex(7,'Dumbbell Hammer Curls','3×12',3,12,'90 sec','Brachialis emphasis. Arm thickness.'),
+          ex(8,'Overhead Dumbbell Tricep Extension','3×10–12',3,'10–12','90 sec','Long head. Full ROM.'),
+          ex(9,'Machine Preacher Curls','3×12–15',3,'12–15','75 sec','Constant tension. Peak contraction.'),
+          ex(10,'Tricep Dips (Assisted)','3×8–10',3,'8–10','2 min','Full ROM.'),
+        ]},
+        {icon:'si-acc',label:'FOREARMS',title:'FOREARM SPECIALIZATION (10 MIN)',exercises:[
+          ex(11,'Barbell Wrist Curls','3×15',3,15,'75 sec','Full ROM. Flexor.'),
+          ex(12,'Reverse Barbell Wrist Curls','3×15',3,15,'75 sec','Full ROM. Extensor.'),
+          ex(13,'Farmer\'s Carry','3×45 sec/side',3,'45 sec','90 sec','Heavy. Grip endurance.'),
+        ]},
+        {icon:'si-hiit',label:'HIIT',title:'HIIT CIRCUIT (15 MIN)',hiit:'mid'},
+      ]
+    },
+    {
+      day:DAY_SHORT[2],dayFull:DAY_NAMES[2],title:'Full Body + Rotational Core',
+      focus:'Compound Pressing · Pulling · RDL · Core Rotation',
+      tags:['t-strength','t-rehab'],tagLabels:['Full Body','Rotational'],
+      sections:[
+        {icon:'si-cardio',label:'CARDIO',title:'MORNING FASTED CARDIO (30 MIN)',cardio:cardioBlock(wNum).cardio},
+        {icon:'si-warm',label:'WARM-UP',title:'WARM-UP (8 MIN)',drills:warmupFullBody(wNum)},
+        {icon:'si-main',label:'UPPER',title:'UPPER BODY COMPOUND (25 MIN)',exercises:[
+          ex(1,'Barbell Floor Press','4×6–8',4,'6–8','2 min','Scapula retracted. Full ROM. Safe shoulder loading.'),
+          ex(2,'Barbell Bent-Over Rows','4×8',4,8,'2 min','Full back contraction. Hinge position.'),
+          ex(3,'Machine Chest Flye','3×12',3,12,'90 sec','Constant tension. Slow eccentrics.'),
+        ]},
+        {icon:'si-acc',label:'LOWER',title:'LOWER BODY (20 MIN)',exercises:[
+          ex(4,'Romanian Deadlift (Heavy)','3×6–8',3,'6–8','2 min',`${isW4?'RPE 8/10.':'RPE 7/10.'} Hip hinge. Hamstring dominant.`),
+          ex(5,'Leg Press (Heavy)','3×6–8',3,'6–8','2.5 min','Maximum strength effort. Controlled tempo.'),
+          ex(6,'Front-Foot Elevated Split Squat','3×8/leg',3,8,'90 sec','Front foot elevated 2–4 inches. Pain-free ROM. Control descent.'),
+        ]},
+        {icon:'si-rehab',label:'ROTATION',title:'ROTATIONAL CORE (10 MIN)',exercises:[
+          ex(7,'Cable Woodchops (High to Low)','3×12/side',3,12,'75 sec','Controlled rotation. Hips stable.'),
+          ex(8,'Half-Kneeling Cable Rotation','3×10/side',3,10,'75 sec','Thoracic rotation. Anti-rotation emphasis.'),
+          ex(9,'Pallof Press','3×12/side',3,12,'60 sec','Heavy band or cable.'),
+        ]},
+        {icon:'si-hiit',label:'HIIT',title:'HIIT CIRCUIT (15 MIN)',hiit:'mid'},
+      ]
+    },
+    {
+      day:DAY_SHORT[3],dayFull:DAY_NAMES[3],title:'Upper Body + Arms Peak',
+      focus:'Pressing · Pulling · Arm + Forearm Emphasis · Posture',
+      tags:['t-upper'],tagLabels:['Upper Body'],
+      sections:[
+        {icon:'si-cardio',label:'CARDIO',title:'MORNING FASTED CARDIO (30 MIN)',cardio:cardioBlock(wNum).cardio},
+        {icon:'si-warm',label:'WARM-UP',title:'WARM-UP (8 MIN)',drills:warmupUpper()},
+        {icon:'si-main',label:'CHEST & BACK',title:'COMPOUND STRENGTH (25 MIN)',exercises:[
+          ex(1,'Dumbbell Bench Press',`4×${isW4?'6–8':'8'}`,4,isW4?'6–8':8,'2 min',`${isW4?'Heavy — RPE 8/10.':'Moderate-heavy.'} Full ROM. Scapula retracted.`),
+          ex(2,'Barbell Bent-Over Rows','4×6–8',4,'6–8','2 min','Full contraction.'),
+          ex(3,'Machine Chest Flye','3×12',3,12,'90 sec','Constant tension.'),
+          ex(4,'Seal Rows (Machine)','3×10',3,10,'90 sec','Full ROM. Scapular squeeze.'),
+        ]},
+        {icon:'si-acc',label:'ARMS',title:'ARMS SPECIALIZATION (20 MIN)',exercises:[
+          ex(5,'Preacher Curls (EZ Bar)','3×10',3,10,'2 min','Strict form. Full ROM.'),
+          ex(6,'Skull Crushers (EZ Bar)','3×10',3,10,'2 min','Full ROM overhead.'),
+          ex(7,'Cable Curls','3×12–15',3,'12–15','75 sec','Constant tension.'),
+          ex(8,'Machine Tricep Press','3×12–15',3,'12–15','75 sec','Full extension. Constant tension.'),
+          ex(9,'Reverse Barbell Wrist Curls','3×15',3,15,'60 sec','Forearm extensor endurance.'),
+          ex(10,'Barbell Wrist Curls','3×15',3,15,'60 sec','Forearm flexor endurance.'),
+        ]},
+        {icon:'si-rehab',label:'POSTURE',title:'POSTURE CORRECTION (5 MIN)',exercises:[
+          ex(11,'Face Pulls (Cable)','3×15',3,15,'60 sec','External rotation. Rotator cuff. Posterior shoulder. Elbows high.'),
+          ex(12,'Reverse Flyes (Machine)','3×12',3,12,'60 sec','Rear delt. Posture correction. Slow eccentric.'),
+        ]},
+        {icon:'si-hiit',label:'HIIT',title:'HIIT CIRCUIT (15 MIN)',hiit:'mid'},
+      ]
+    },
+    {
+      day:DAY_SHORT[4],dayFull:DAY_NAMES[4],title:'Lower Body Power + Conditioning',
+      focus:'RDL · Machines · Rotational Power · Posterior Chain',
+      tags:['t-lower','t-rehab'],tagLabels:['Lower Body','Power'],
+      sections:[
+        {icon:'si-cardio',label:'CARDIO',title:'MORNING FASTED CARDIO (30 MIN)',cardio:cardioBlock(wNum).cardio},
+        {icon:'si-warm',label:'WARM-UP',title:'WARM-UP (8 MIN)',drills:warmupLower(wNum)},
+        {icon:'si-main',label:'LOWER',title:'LOWER BODY STRENGTH (30 MIN)',exercises:[
+          ex(1,'Romanian Deadlift','4×5',4,5,'2.5 min',`${isW4?'Heavy — RPE 8/10. Explosive concentric.':'RPE 7/10. Controlled.'} Posterior chain primary.`),
+          ex(2,'Leg Extensions (Drop Set)','3×10+10+8',3,'Drop set','2 min','Decrease weight each set. Metabolic stress. Quad development.'),
+          ex(3,'Hamstring Curls (Tempo)','3×8',3,8,'2 min','3 seconds down, 1 second up. Maximum time under tension.'),
+          ex(4,'Cossack Squats','3×10/side',3,10,'90 sec','2-second hold at bottom. Hip mobility + adductor strength.'),
+          ex(5,'Front-Foot Elevated Split Squat','3×10/leg',3,10,'90 sec',`${isW4?'Heavier than Week 3.':'Moderate load.'} Single-leg stability.`),
+        ]},
+        {icon:'si-rehab',label:'ROTATION',title:'ROTATIONAL CORE (15 MIN)',exercises:[
+          ex(6,'Cable Woodchops (Low to High) — Explosive','3×10/side',3,10,'90 sec','Drive cable diagonally upward. Explosive from legs through rotation.'),
+          ex(7,'Half-Kneeling Cable Rotations','3×10/side',3,10,'75 sec','Thoracic rotation. Tall posture. Anti-rotation.'),
+          ex(8,'Pallof Press (Heavy)','3×10/side',3,10,'75 sec','Anti-rotation. Maximum core tension.'),
+        ]},
+        {icon:'si-hiit',label:'HIIT',title:'HIIT CIRCUIT (15 MIN)',hiit:'mid'},
+      ]
+    },
+    {
+      day:DAY_SHORT[5],dayFull:DAY_NAMES[5],title:'Mobility + Recovery',
+      focus:'Full Body Mobility · Flexibility · Optional Sauna',
+      tags:['t-mob','t-rest'],tagLabels:['Mobility','Recovery'],
+      sections:[
+        {icon:'si-mob',label:'MOBILITY',title:'THORACIC & SPINAL (8 MIN)',drills:[
+          {name:'Cat-Cow Stretches',detail:'2×12',note:'Full spinal wave. Inhale on arch, exhale on curl.'},
+          {name:'Thread the Needle',detail:'2×10/side',note:'Half-kneeling. Arm under and through. Hold 1 sec.'},
+          {name:'Thoracic Rotations',detail:'2×12/side',note:'Half-kneeling. Elbow to ceiling.'},
+          {name:'Quadruped Shoulder Circles',detail:'2×10 forward + backward',note:'Full arc. Controlled.'},
+        ]},
+        {icon:'si-mob',label:'HIP',title:'HIP & LOWER BODY (10 MIN)',drills:[
+          {name:'Couch Stretch',detail:'90 sec/side',note:'Squeeze rear glute to deepen.'},
+          {name:'90/90 Hip Stretch',detail:'60 sec/side',note:'Both knees at 90°.'},
+          {name:'Pigeon Pose',detail:'60 sec/side',note:'Modified on floor. Deep hip rotators.'},
+          {name:'Cossack Squats',detail:'2×8/side',note:'Bodyweight. Adductor mobility.'},
+          {name:'Hamstring Stretch',detail:'60 sec',note:'Seated forward fold.'},
+        ]},
+        {icon:'si-mob',label:'UPPER',title:'SHOULDER & UPPER BODY (8 MIN)',drills:[
+          {name:'Shoulder Dislocates (Band)',detail:'2×15',note:'Wide grip over and back.'},
+          {name:'Band Pull-Aparts',detail:'2×15',note:'Rear delt and external rotation.'},
+          {name:"Child's Pose (Arms Extended)",detail:'90 sec',note:'Lat and thoracic stretch.'},
+          {name:'90/90 Shoulder Stretch',detail:'60 sec/side',note:'Internal rotation release.'},
+        ]},
+        {icon:'si-warm',label:'FLEX',title:'LOWER BODY FLEXIBILITY (8 MIN)',drills:[
+          {name:'Calf Stretch',detail:'45 sec/leg',note:'Straight + bent knee versions.'},
+          {name:'Spinal Twists (Lying)',detail:'30 sec/side',note:'Shoulder stays flat.'},
+          {name:'Happy Baby Pose',detail:'60 sec',note:'Rock gently side to side.'},
+          {name:'Supine Hip Flexor Stretch',detail:'60 sec/side',note:'Iliopsoas release.'},
+        ]},
+        {icon:'si-warm',label:'WRIST',title:'WRIST & FOREARM (3 MIN)',drills:[
+          {name:'Wrist Circles',detail:'20 each direction',note:''},
+          {name:'Wrist Flexor Stretch',detail:'30 sec/side',note:'Palm up, fingers down.'},
+          {name:'Wrist Extensor Stretch',detail:'30 sec/side',note:'Fist down, press toward floor.'},
+        ]},
+      ]
+    },
+    {
+      day:DAY_SHORT[6],dayFull:DAY_NAMES[6],title:'Complete Rest',
+      focus:'Full Recovery · Sleep · Light Walk Optional',
+      tags:['t-rest'],tagLabels:['Rest'],
+      sections:[{icon:'si-mob',label:'REST',title:'REST DAY GUIDELINES',drills:[
+        {name:'Sleep',detail:'7–9 hours',note:'Priority. Magnesium 400mg at 8:30 PM.'},
+        {name:'Light Walk',detail:'20–30 min optional',note:'Easy pace. Blood flow only — not a workout.'},
+        {name:'Hydration',detail:'3+ litres',note:'Continue on rest days.'},
+        {name:'Nutrition',detail:'Same protocol',note:'Do not reduce calories on rest days.'},
+      ]}]
+    },
+  ];
+}
+
+function makeDays_W5(){
+  const wNum = 5;
+  return [
+    {
+      day:DAY_SHORT[0],dayFull:DAY_NAMES[0],title:'Lower Body Strength + Power',
+      focus:'Heavy RDL · Heavy Leg Press · Rotational Power · Peak Intensity',
+      tags:['t-lower','t-strength'],tagLabels:['Lower Body','Peak Week'],
+      sections:[
+        {icon:'si-cardio',label:'CARDIO',title:'MORNING FASTED CARDIO (30 MIN)',cardio:cardioBlock(wNum).cardio},
+        {icon:'si-warm',label:'WARM-UP',title:'WARM-UP (8 MIN)',drills:warmupLower(wNum)},
+        {icon:'si-main',label:'MAIN',title:'STRENGTH BLOCK (35 MIN)',exercises:[
+          ex(1,'Leg Press (Machine)','4×6–8',4,'6–8','2 min','RPE 8–9/10. Heaviest week. Maximum strength effort.'),
+          ex(2,'Romanian Deadlift','3×6–8',3,'6–8','2 min','Heavy. RPE 8–9/10. Explosive concentric. Controlled eccentric. Posterior chain peak.'),
+          ex(3,'Leg Extensions','3×12',3,12,'90 sec','Controlled tempo. Moderate weight. Quad isolation.'),
+          ex(4,'Hamstring Curls + 10 Partials','3×10+10',3,'10+10','2 min','Metabolic stress. ACL support.'),
+          ex(5,'Front-Foot Elevated Split Squat (Heavy)','3×8/leg',3,8,'2 min','Increased load vs Week 3–4. Maximum single-leg stability.'),
+        ]},
+        {icon:'si-rehab',label:'ROTATION',title:'ROTATIONAL POWER (15 MIN)',exercises:[
+          ex(6,'Cable Woodchops Explosive (Low to High)','4×6/side',4,6,'2.5 min','Heavy resistance. Explosive drive from legs. Maximum rotational power output.'),
+          ex(7,'Pallof Press (Heavy)','3×8/side',3,8,'90 sec','Maximum anti-rotation. Heavy cable or band.'),
+        ]},
+        {icon:'si-acc',label:'FINISHER',title:'FINISHER (5 MIN)',exercises:[
+          ex(8,'Calf Raises (Weighted)','3×15',3,15,'75 sec','Full ROM. Controlled.'),
+        ]},
+        {icon:'si-hiit',label:'HIIT',title:'HIIT CIRCUIT (15 MIN)',hiit:'high'},
+      ]
+    },
+    {
+      day:DAY_SHORT[1],dayFull:DAY_NAMES[1],title:'Upper Body + Arms Peak',
+      focus:'Maximum Pressing & Pulling · Arm Hypertrophy · Peak Conditioning',
+      tags:['t-upper'],tagLabels:['Upper Body','Peak Week'],
+      sections:[
+        {icon:'si-cardio',label:'CARDIO',title:'MORNING FASTED CARDIO (30 MIN)',cardio:cardioBlock(wNum).cardio},
+        {icon:'si-warm',label:'WARM-UP',title:'WARM-UP (8 MIN)',drills:warmupUpper()},
+        {icon:'si-main',label:'CHEST & BACK',title:'COMPOUND STRENGTH (30 MIN)',exercises:[
+          ex(1,'Dumbbell Bench Press','4×6–8',4,'6–8','2.5 min','Heavy. RPE 8–9/10. Full ROM. Maximum pressing strength.'),
+          ex(2,'Barbell Rows (Overhand)','4×6–8',4,'6–8','2.5 min','Heavy. Full contraction.'),
+          ex(3,'Incline Dumbbell Press','3×10',3,10,'2 min','Moderate. Upper chest.'),
+          ex(4,'Machine Lat Pulldowns','3×10',3,10,'90 sec','Moderate.'),
+        ]},
+        {icon:'si-acc',label:'ARMS',title:'ARMS PEAK CONDITIONING (25 MIN)',exercises:[
+          ex(5,'EZ Bar Curls (Heavy)','4×6',4,6,'2.5 min','Heaviest week. Strict form. Peak bicep strength.'),
+          ex(6,'Tricep Rope Pushdowns (Volume)','4×12–15',4,'12–15','90 sec','Constant tension. Metabolic stress.'),
+          ex(7,'Preacher Curls','3×10',3,10,'2 min','Full ROM. No momentum.'),
+          ex(8,'Machine Tricep Press','3×12–15',3,'12–15','90 sec','Constant tension.'),
+          ex(9,'Dumbbell Hammer Curls (Tempo)','3×12',3,12,'90 sec','Brachialis emphasis.'),
+          ex(10,'Overhead Dumbbell Extension','3×12',3,12,'90 sec','Full ROM. Long head.'),
+        ]},
+        {icon:'si-acc',label:'FOREARMS',title:'FOREARMS (5 MIN)',exercises:[
+          ex(11,'Wrist Curls + Reverse (Superset)','2×15',2,15,'60 sec','Back to back. Complete forearm.'),
+          ex(12,'Farmer\'s Carry','2×50 sec/side',2,'50 sec','90 sec','Heavy. Grip endurance.'),
+        ]},
+        {icon:'si-rehab',label:'POSTURE',title:'POSTURE (5 MIN)',exercises:[
+          ex(13,'Face Pulls','3×15',3,15,'60 sec','External rotation. Rotator cuff. Shoulder health.'),
+        ]},
+        {icon:'si-hiit',label:'HIIT',title:'HIIT CIRCUIT (15 MIN)',hiit:'high'},
+      ]
+    },
+    {
+      day:DAY_SHORT[2],dayFull:DAY_NAMES[2],title:'Lower Body Power + Conditioning',
+      focus:'RDL Power Focus · Machines · Conditioning Finisher',
+      tags:['t-lower','t-strength'],tagLabels:['Lower Body','Conditioning'],
+      sections:[
+        {icon:'si-cardio',label:'CARDIO',title:'MORNING FASTED CARDIO (30 MIN)',cardio:cardioBlock(wNum).cardio},
+        {icon:'si-warm',label:'WARM-UP',title:'WARM-UP (8 MIN)',drills:warmupLower(wNum)},
+        {icon:'si-main',label:'LOWER',title:'LOWER BODY POWER (35 MIN)',exercises:[
+          ex(1,'Romanian Deadlift (Power Focus)','5×3',5,3,'2.5 min','RPE 8–9/10. Explosive concentric. Maximum power. Perfect form.'),
+          ex(2,'Leg Extensions (Drop Set)','2×12+12+8',2,'Drop set','3 min','Metabolic stress. Quad peak.'),
+          ex(3,'Hamstring Curls (Tempo)','3×8',3,8,'2.5 min','3 sec down, 1 up. Maximum TUT.'),
+          ex(4,'Step-Ups (Box + Dumbbells)','3×10/leg',3,10,'2 min','Controlled descent. No jumping. Single-leg stability.'),
+        ]},
+        {icon:'si-rehab',label:'ROTATION',title:'ROTATIONAL POWER (15 MIN)',exercises:[
+          ex(5,'Cable Woodchops Explosive (High to Low + Low to High)','4×8/side',4,8,'2 min','Alternate direction each round. Full rotation. Explosive from legs.'),
+          ex(6,'Half-Kneeling Cable Rotations','3×10/side',3,10,'75 sec','Thoracic rotation. Anti-rotation.'),
+          ex(7,'Pallof Press (Heavy + Tempo)','3×8/side',3,8,'90 sec','2-second hold at end range. Maximum anti-rotation strength.'),
+        ]},
+        {icon:'si-hiit',label:'HIIT',title:'HIIT CIRCUIT (15 MIN)',hiit:'high'},
+      ]
+    },
+    {
+      day:DAY_SHORT[3],dayFull:DAY_NAMES[3],title:'Full Body Strength + Rotational Power',
+      focus:'Heavy Pressing & Pulling · Rotational Specialization · Core Peak',
+      tags:['t-strength','t-rehab'],tagLabels:['Full Body','Peak Week'],
+      sections:[
+        {icon:'si-cardio',label:'CARDIO',title:'MORNING FASTED CARDIO (30 MIN)',cardio:cardioBlock(wNum).cardio},
+        {icon:'si-warm',label:'WARM-UP',title:'WARM-UP (8 MIN)',drills:warmupFullBody(wNum)},
+        {icon:'si-main',label:'UPPER',title:'COMPOUND STRENGTH (30 MIN)',exercises:[
+          ex(1,'Barbell Floor Press','4×6–8',4,'6–8','2.5 min','Heavy. Full ROM. Scapula retracted.'),
+          ex(2,'Barbell Bent-Over Rows','4×6–8',4,'6–8','2.5 min','Heavy. Full back contraction.'),
+          ex(3,'Machine Chest Flye (Volume)','3×12',3,12,'2 min','Slow eccentrics. Constant tension.'),
+        ]},
+        {icon:'si-rehab',label:'ROTATION',title:'ROTATIONAL PEAK (25 MIN)',exercises:[
+          ex(4,'Cable Woodchops (High to Low — Power)','4×6/side',4,6,'2.5 min','Heavy resistance. Explosive rotation. Full power output.'),
+          ex(5,'Cable Woodchops (Low to High — Tempo)','3×10/side',3,10,'2 min','2-second up, 2-second down. Constant tension. Rotational endurance.'),
+          ex(6,'Half-Kneeling Rotational Press (Cable)','3×8/side',3,8,'2 min','Kneeling. Press cable across body. Core + pressing. Shoulder stability.'),
+          ex(7,'Pallof Press (Heavy)','3×8/side',3,8,'90 sec','Anti-rotation strength peak.'),
+        ]},
+        {icon:'si-acc',label:'ARMS',title:'ARMS CONDITIONING (12 MIN)',exercises:[
+          ex(8,'Cable Curls (Pump Set)','3×12–15',3,'12–15','45 sec','Minimal rest. Bicep pump.'),
+          ex(9,'Machine Tricep Press (Pump Set)','3×12–15',3,'12–15','45 sec','Minimal rest. Tricep pump.'),
+        ]},
+        {icon:'si-hiit',label:'HIIT',title:'HIIT CIRCUIT (15 MIN)',hiit:'high'},
+      ]
+    },
+    {
+      day:DAY_SHORT[4],dayFull:DAY_NAMES[4],title:'Upper Body + Full Arm Specialization',
+      focus:'Hypertrophy · Arm Peak Week · Chest & Back Volume',
+      tags:['t-upper'],tagLabels:['Upper Body','Peak Week'],
+      sections:[
+        {icon:'si-cardio',label:'CARDIO',title:'MORNING FASTED CARDIO (30 MIN)',cardio:cardioBlock(wNum).cardio},
+        {icon:'si-warm',label:'WARM-UP',title:'WARM-UP (8 MIN)',drills:warmupUpper()},
+        {icon:'si-main',label:'CHEST & BACK',title:'CHEST & BACK HYPERTROPHY (25 MIN)',exercises:[
+          ex(1,'Dumbbell Bench Press (Hypertrophy)','4×8–10',4,'8–10','2 min','1-second pause at bottom. Moderate-heavy.'),
+          ex(2,'Barbell Rows (Hypertrophy)','3×8–10',3,'8–10','2 min','Moderate weight.'),
+          ex(3,'Machine Chest Flye','3×12',3,12,'90 sec','Constant tension.'),
+          ex(4,'Cable Lat Pulldowns','3×12',3,12,'90 sec','Moderate weight.'),
+        ]},
+        {icon:'si-acc',label:'BICEPS',title:'BICEP BLOCK (20 MIN)',exercises:[
+          ex(5,'EZ Bar Curls (Strength)','3×8',3,8,'2 min','Heavy. Strict form.'),
+          ex(6,'Preacher Curls (Hypertrophy)','3×10–12',3,'10–12','2 min','Full ROM.'),
+          ex(7,'Hammer Curls (Brachialis)','3×12',3,12,'90 sec','Neutral grip. Arm thickness.'),
+          ex(8,'Cable Curls (Pump Set)','3×15',3,15,'60 sec','Constant tension.'),
+        ]},
+        {icon:'si-acc',label:'TRICEPS',title:'TRICEP BLOCK (20 MIN)',exercises:[
+          ex(9,'Skull Crushers (Heavy)','3×8',3,8,'2 min','Heavy. Full ROM.'),
+          ex(10,'Tricep Rope Pushdowns (Hypertrophy)','3×10–12',3,'10–12','90 sec','Moderate.'),
+          ex(11,'Machine Tricep Press (Hypertrophy)','3×12',3,12,'90 sec','Constant tension.'),
+          ex(12,'Overhead Dumbbell Extension (Volume)','3×12–15',3,'12–15','75 sec','Light-moderate.'),
+        ]},
+        {icon:'si-acc',label:'FOREARMS',title:'FOREARM BLOCK (5 MIN)',exercises:[
+          ex(13,'Wrist Curls + Reverse (Superset)','3×12',3,12,'Minimal','Complete forearm conditioning.'),
+        ]},
+        {icon:'si-rehab',label:'POSTURE',title:'POSTURE & SHOULDER (8 MIN)',exercises:[
+          ex(14,'Face Pulls (Heavy)','3×15',3,15,'60 sec','External rotation. Rotator cuff. Rear delt.'),
+          ex(15,'Farmer\'s Carry (Finisher)','2×50 sec/side',2,'50 sec','90 sec','Heavy. Grip. Posture. Core.'),
+        ]},
+        {icon:'si-hiit',label:'HIIT',title:'HIIT CIRCUIT (15 MIN)',hiit:'high'},
+      ]
+    },
+    {
+      day:DAY_SHORT[5],dayFull:DAY_NAMES[5],title:'Mobility + Recovery',
+      focus:'Full Body Mobility · Flexibility · Extended Sauna',
+      tags:['t-mob','t-rest'],tagLabels:['Mobility','Recovery'],
+      sections:[
+        {icon:'si-mob',label:'MOBILITY',title:'COMPLETE MOBILITY FLOW (37 MIN)',drills:[
+          {name:'Cat-Cow Stretches',detail:'2×12',note:'Thoracic. Full spinal wave.'},
+          {name:'Thread the Needle',detail:'2×10/side',note:'Half-kneeling. Hold 1 sec.'},
+          {name:'Thoracic Rotations',detail:'2×12/side',note:'Elbow to ceiling.'},
+          {name:'Couch Stretch',detail:'90 sec/side',note:'Hip flexor lengthening.'},
+          {name:'90/90 Hip Stretch',detail:'60 sec/side',note:'Both knees at 90°.'},
+          {name:'Pigeon Pose',detail:'60 sec/side',note:'Deep hip rotator release.'},
+          {name:'Cossack Squats',detail:'2×8/side',note:'Bodyweight. Adductor mobility.'},
+          {name:'Hamstring Stretch',detail:'60 sec',note:'Seated forward fold.'},
+          {name:'Shoulder Dislocates (Band)',detail:'2×15',note:'Wide grip over and back.'},
+          {name:'Band Pull-Aparts',detail:'2×15',note:'Rear delt and external rotation.'},
+          {name:"Child's Pose",detail:'90 sec',note:'Arms extended. Lat stretch.'},
+          {name:'Calf Stretch',detail:'45 sec/leg',note:'Straight + bent knee.'},
+          {name:'Spinal Twists (Lying)',detail:'30 sec/side',note:'Shoulder stays flat.'},
+          {name:'Happy Baby Pose',detail:'60 sec',note:'Rock gently.'},
+          {name:'Wrist Circles + Stretches',detail:'3 min total',note:'Full forearm and wrist complex.'},
+        ]},
+        {icon:'si-warm',label:'SAUNA',title:'SAUNA SESSION (15–20 MIN)',drills:[
+          {name:'Temperature',detail:'70–80°C',note:'Week 5: extended session. Up to 20 min.'},
+          {name:'Duration',detail:'15–20 min',note:''},
+          {name:'Hydration',detail:'500ml before · 250ml during · 500ml after',note:'Electrolytes recommended post-sauna.'},
+          {name:'Benefits',detail:'Recovery & metabolic boost',note:'Muscle recovery · joint flexibility · stress reduction · GH elevation.'},
+        ]},
+      ]
+    },
+    {
+      day:DAY_SHORT[6],dayFull:DAY_NAMES[6],title:'Complete Rest',
+      focus:'Full Recovery · Sleep · Optional Light Walk',
+      tags:['t-rest'],tagLabels:['Rest'],
+      sections:[{icon:'si-mob',label:'REST',title:'REST DAY GUIDELINES',drills:[
+        {name:'Sleep',detail:'7–9 hours',note:'Priority. Magnesium 400mg at 8:30 PM.'},
+        {name:'Light Walk',detail:'20–30 min optional',note:'Easy pace. Blood flow only.'},
+        {name:'Hydration',detail:'3+ litres',note:''},
+        {name:'Refeed Option',detail:'50–75g carbs with dinner',note:'Week 5 only — one meal. Clean sources: rice, sweet potato, oats. Hormonal recovery and glycogen replenishment.'},
+      ]}]
+    },
+  ];
+}
+
+const WEEKS = {
+  1: makeDays_W12(false),
+  2: makeDays_W12(true),
+  3: makeDays_W34(false),
+  4: makeDays_W34(true),
+  5: makeDays_W5(),
+};
+
+// ─── ADD / DELETE HANDLERS ──────────────────────────────────────────────────
+function deleteEx(w, d, s, e) {
+  WEEKS[w][d].sections[s].exercises.splice(e, 1);
+  renderWeek(w);
+  showDay(d);
+}
+function addEx(w, d, s) {
+  if(!WEEKS[w][d].sections[s].exercises) WEEKS[w][d].sections[s].exercises = [];
+  WEEKS[w][d].sections[s].exercises.push(ex(WEEKS[w][d].sections[s].exercises.length + 1, 'New Exercise', '3×10', 3, 10, '60 sec', 'Notes...'));
+  renderWeek(w);
+  showDay(d);
+}
+function deleteDrill(w, d, s, idx) {
+  WEEKS[w][d].sections[s].drills.splice(idx, 1);
+  renderWeek(w);
+  showDay(d);
+}
+function addDrill(w, d, s) {
+  if(!WEEKS[w][d].sections[s].drills) WEEKS[w][d].sections[s].drills = [];
+  WEEKS[w][d].sections[s].drills.push({name: 'New Drill', detail: 'Detail', note: 'Notes...'});
+  renderWeek(w);
+  showDay(d);
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+let currentWeek = 1;
+let currentDay = 0;
+
+function renderCardioBlock(note, week, di, si) {
+  return `
+    <div class="cardio-wrap">
+      <div class="cardio-header">
+        <div class="cardio-badge">🌅 ZONE 1</div>
+        <div class="cardio-title" contenteditable="true" onclick="event.stopPropagation()">Fasted Cardio — 30 Minutes</div>
+      </div>
+      <div class="cardio-pill-row">
+        <div class="cardio-pill" contenteditable="true">Fasted state</div>
+        <div class="cardio-pill" contenteditable="true">HR: 95–120 bpm</div>
+        <div class="cardio-pill" contenteditable="true">Low-impact only</div>
+        <div class="cardio-pill" contenteditable="true">Before training</div>
+      </div>
+      <div class="cardio-grid">
+        <div class="cardio-stat"><div class="cardio-stat-label">Duration</div><div class="cardio-stat-val" contenteditable="true">30 min</div></div>
+        <div class="cardio-stat"><div class="cardio-stat-label">Timing</div><div class="cardio-stat-val" contenteditable="true">Morning, fasted</div></div>
+        <div class="cardio-stat"><div class="cardio-stat-label">L-Carnitine</div><div class="cardio-stat-val" contenteditable="true">3–5g at 8 AM</div></div>
+        <div class="cardio-stat"><div class="cardio-stat-label">Purpose</div><div class="cardio-stat-val" contenteditable="true">Fat burn + recover</div></div>
+      </div>
+      <div class="cardio-note" contenteditable="true" onblur="WEEKS[${week}][${di}].sections[${si}].cardio = this.innerText">${note}</div>
+    </div>`;
+}
+
+function renderHiit(hiitKey) {
+  const h = HIIT[hiitKey];
+  const pills = h.structure.map(s=>`<div class="hiit-pill" contenteditable="true">${s}</div>`).join('');
+  const exs = h.exercises.map(e=>`
+    <div class="hiit-ex">
+      <div class="hiit-ex-name" contenteditable="true">${e.name}</div>
+      <div class="hiit-ex-detail" contenteditable="true">${e.detail}</div>
+    </div>`).join('');
+  return `
+    <div class="hiit-wrap">
+      <div class="hiit-header">
+        <div class="hiit-badge">🔥 HIIT</div>
+        <div class="hiit-title" contenteditable="true">${h.title}</div>
+      </div>
+      <div class="hiit-structure">${pills}</div>
+      <div class="hiit-note" contenteditable="true">${h.note}</div>
+      <div class="hiit-grid">${exs}</div>
+    </div>`;
+}
+
+function renderSection(sec, si, di, week) {
+  if (sec.cardio) {
+    return `
+      <div class="section">
+        <div class="sec-head" onclick="toggleSec(this, event)">
+          <div class="sec-icon si-cardio">🌅</div>
+          <div class="sec-title" contenteditable="true" onclick="event.stopPropagation()" onblur="WEEKS[${week}][${di}].sections[${si}].title = this.innerText">${sec.title}</div>
+          <div class="sec-toggle open">▲</div>
+        </div>
+        <div class="sec-body">${renderCardioBlock(sec.cardio, week, di, si)}</div>
+      </div>`;
+  }
+
+  if (sec.hiit) {
+    return `
+      <div class="section">
+        <div class="sec-head" onclick="toggleSec(this, event)">
+          <div class="sec-icon si-hiit">🔥</div>
+          <div class="sec-title" contenteditable="true" onclick="event.stopPropagation()">${sec.title}</div>
+          <div class="sec-toggle open">▲</div>
+        </div>
+        <div class="sec-body">${renderHiit(sec.hiit)}</div>
+      </div>`;
+  }
+
+  const icons = {'si-warm':'🌀','si-mob':'🧘','si-main':'💪','si-acc':'🎯','si-cond':'⚡','si-hiit':'🔥','si-rehab':'🦵','si-notes':'📝','si-cardio':'🌅','si-posture':'🧍'};
+  const icon = icons[sec.icon] || '▸';
+
+  let bodyHtml = '';
+
+  if (sec.drills && sec.drills.length) {
+    bodyHtml += `<ul class="drill-list">${sec.drills.map((d,ei)=>`
+      <li class="drill-item">
+        <span class="drill-arrow">→</span>
+        <div style="flex:1;">
+          <div class="drill-name"><span contenteditable="true" onblur="WEEKS[${week}][${di}].sections[${si}].drills[${ei}].name = this.innerText">${d.name}</span>${d.detail?`<span class="drill-detail" contenteditable="true" onblur="WEEKS[${week}][${di}].sections[${si}].drills[${ei}].detail = this.innerText">${d.detail}</span>`:''}</div>
+          ${d.note?`<div class="drill-note" contenteditable="true" onblur="WEEKS[${week}][${di}].sections[${si}].drills[${ei}].note = this.innerText">${d.note}</div>`:''}
+        </div>
+        <button class="edit-btn" onclick="deleteDrill(${week}, ${di}, ${si}, ${ei})">✕</button>
+      </li>`).join('')}</ul>`;
+    bodyHtml += `<button class="add-btn" onclick="addDrill(${week}, ${di}, ${si})">+ Add Drill/Item</button>`;
+  }
+
+  if (sec.exercises && sec.exercises.length) {
+    bodyHtml += sec.exercises.map((e,ei)=>{
+      const eid = `ex-${di}-${si}-${ei}`;
+      return `
+        <div class="ex-block">
+          <div class="ex-head" onclick="toggleEx('${eid}',this, event)">
+            <div class="ex-num" contenteditable="true" onclick="event.stopPropagation()" onblur="WEEKS[${week}][${di}].sections[${si}].exercises[${ei}].num = this.innerText">${e.num}</div>
+            <div class="ex-name" contenteditable="true" onclick="event.stopPropagation()" onblur="WEEKS[${week}][${di}].sections[${si}].exercises[${ei}].name = this.innerText">${e.name}</div>
+            <div class="ex-meta" contenteditable="true" onclick="event.stopPropagation()" onblur="WEEKS[${week}][${di}].sections[${si}].exercises[${ei}].meta = this.innerText">${e.meta}</div>
+            <button class="edit-btn" onclick="event.stopPropagation(); deleteEx(${week}, ${di}, ${si}, ${ei})">✕</button>
+            <div class="ex-arr" id="arr-${eid}">▼</div>
+          </div>
+          <div class="ex-body" id="${eid}">
+            <div class="ex-grid">
+              <div class="ex-stat"><div class="ex-stat-label">Sets</div><div class="ex-stat-val" contenteditable="true" onblur="WEEKS[${week}][${di}].sections[${si}].exercises[${ei}].sets = this.innerText">${e.sets}</div></div>
+              <div class="ex-stat"><div class="ex-stat-label">Reps</div><div class="ex-stat-val" contenteditable="true" onblur="WEEKS[${week}][${di}].sections[${si}].exercises[${ei}].reps = this.innerText">${e.reps}</div></div>
+              <div class="ex-stat"><div class="ex-stat-label">Rest</div><div class="ex-stat-val" contenteditable="true" onblur="WEEKS[${week}][${di}].sections[${si}].exercises[${ei}].rest = this.innerText">${e.rest}</div></div>
+              <div class="ex-stat"><div class="ex-stat-label">Intensity</div><div class="ex-stat-val" contenteditable="true">Controlled</div></div>
+            </div>
+            ${e.note!==undefined?`<div class="ex-note" contenteditable="true" onblur="WEEKS[${week}][${di}].sections[${si}].exercises[${ei}].note = this.innerText">${e.note}</div>`:''}
+          </div>
+        </div>`;
+    }).join('');
+    bodyHtml += `<button class="add-btn" onclick="addEx(${week}, ${di}, ${si})">+ Add Exercise</button>`;
+  }
+
+  return `
+    <div class="section">
+      <div class="sec-head" onclick="toggleSec(this, event)">
+        <div class="sec-icon ${sec.icon}">${icon}</div>
+        <div class="sec-title" contenteditable="true" onclick="event.stopPropagation()" onblur="WEEKS[${week}][${di}].sections[${si}].title = this.innerText">${sec.title}</div>
+        <div class="sec-toggle open">▲</div>
+      </div>
+      <div class="sec-body">${bodyHtml}</div>
+    </div>`;
+}
+
+function renderWeek(week) {
+  currentWeek = week;
+  currentDay = 0;
+  const days = WEEKS[week];
+  const phase = PHASES[week];
+
+  document.getElementById('heroTitle').textContent = `WEEK ${week}`;
+  document.getElementById('heroSub').textContent = phase.sub;
+  document.getElementById('heroPhase').textContent = phase.label;
+  document.getElementById('weekSelect').value = week;
+
+  const nav = document.getElementById('dayNav');
+  nav.innerHTML = days.map((d,i)=>`
+    <button class="day-btn ${i===0?'active':''}" onclick="showDay(${i})">${d.day}</button>
+  `).join('');
+
+  const views = document.getElementById('dayViews');
+  views.innerHTML = days.map((d,di)=>`
+    <div class="day-view ${di===0?'active':''}" id="dayView-${di}">
+      <div class="day-header">
+        <div class="dh-row">
+          <div class="day-badge" contenteditable="true">${d.dayFull}</div>
+          <div style="flex:1;">
+            <div class="day-title" contenteditable="true" onblur="WEEKS[${week}][${di}].title = this.innerText">${d.title}</div>
+            <div class="day-focus" contenteditable="true" onblur="WEEKS[${week}][${di}].focus = this.innerText">${d.focus}</div>
+            <div class="tag-row">
+              ${d.tags.map((t,i)=>`<span class="tag ${t}" contenteditable="true">${d.tagLabels[i]}</span>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+      ${d.alert?`<div class="alert-wrap"><div class="alert" contenteditable="true"><strong>⚠ Note:</strong> ${d.alert}</div></div>`:''}
+      ${d.sections.map((s,si)=>renderSection(s,si,di,week)).join('')}
+    </div>
+  `).join('');
+}
+
+function showDay(idx) {
+  currentDay = idx;
+  document.querySelectorAll('.day-view').forEach((v,i)=>{
+    v.classList.toggle('active', i===idx);
+  });
+  document.querySelectorAll('.day-btn').forEach((b,i)=>{
+    b.classList.toggle('active', i===idx);
+  });
+}
+
+function changeWeek(w) {
+  renderWeek(parseInt(w));
+}
+
+function toggleSec(head, event) {
+  if (event && event.target.isContentEditable) return;
+  const body = head.nextElementSibling;
+  const tog = head.querySelector('.sec-toggle');
+  body.classList.toggle('collapsed');
+  tog.classList.toggle('open', !body.classList.contains('collapsed'));
+  tog.textContent = body.classList.contains('collapsed') ? '▼' : '▲';
+}
+
+function toggleEx(id, head, event) {
+  if (event && event.target.isContentEditable) return;
+  const body = document.getElementById(id);
+  const arr = document.getElementById('arr-' + id);
+  body.classList.toggle('open');
+  arr.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : '';
+}
+
+function showView(name, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(name + 'View').classList.add('active');
+  btn.classList.add('active');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+renderWeek(1);
+</script>
+</body>
+</html>
